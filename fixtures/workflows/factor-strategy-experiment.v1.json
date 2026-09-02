@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "summer.workflow/v1",
+  "workflowId": "factor-strategy-experiment",
+  "revision": 1,
+  "profile": {
+    "kind": "bounded-flow",
+    "terminalNodeIds": ["terminal"]
+  },
+  "entryNodeId": "freeze-experiment",
+  "nodes": [
+    { "id": "freeze-experiment", "component": { "namespace": "factor", "name": "freeze-experiment", "version": "1.0.0" } },
+    { "id": "generate-candidate", "component": { "namespace": "factor", "name": "generate-candidate", "version": "1.0.0" } },
+    { "id": "validate-candidate", "component": { "namespace": "factor", "name": "validate-candidate", "version": "1.0.0" } },
+    { "id": "run-backtest", "component": { "namespace": "factor", "name": "run-backtest", "version": "1.0.0" }, "maxAttempts": 2, "idempotencyKey": "experiment-id:attempt-id" },
+    { "id": "evaluate-evidence", "component": { "namespace": "factor", "name": "evaluate-evidence", "version": "1.0.0" } },
+    { "id": "terminal", "component": { "namespace": "summer", "name": "terminal-receipt", "version": "1.0.0" } }
+  ],
+  "edges": [
+    { "id": "freeze-generate", "from": "freeze-experiment", "to": "generate-candidate", "condition": { "kind": "node-succeeded" } },
+    { "id": "generate-validate", "from": "generate-candidate", "to": "validate-candidate", "condition": { "kind": "node-succeeded" } },
+    { "id": "validate-backtest", "from": "validate-candidate", "to": "run-backtest", "condition": { "kind": "node-succeeded" } },
+    { "id": "backtest-evaluate", "from": "run-backtest", "to": "evaluate-evidence", "condition": { "kind": "node-succeeded" } },
+    { "id": "evaluate-terminal", "from": "evaluate-evidence", "to": "terminal", "condition": { "kind": "node-succeeded" } }
+  ],
+  "metadata": {
+    "scope": "offline model-free conformance only"
+  }
+}

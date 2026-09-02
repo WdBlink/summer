@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "useUnknownInCatchVariables": true,
+    "verbatimModuleSyntax": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@summer/protocol": ["./packages/protocol/src/index.ts"],
+      "@summer/compiler": ["./packages/compiler/src/index.ts"],
+      "@summer/components": ["./packages/components/src/index.ts"],
+      "@summer/core": ["./packages/core/src/index.ts"],
+      "@summer/runtime-mastra": ["./packages/runtime-mastra/src/index.ts"],
+      "@summer/cli": ["./packages/cli/src/index.ts"]
+    }
+  }
+}

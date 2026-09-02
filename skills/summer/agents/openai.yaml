@@ -1,0 +1,4 @@
+interface:
+  display_name: "Summer"
+  short_description: "Validate and inspect typed Summer workflows"
+  default_prompt: "Use $summer to validate and inspect this typed workflow before it runs."

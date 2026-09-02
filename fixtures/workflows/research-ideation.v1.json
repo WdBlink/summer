@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "summer.workflow/v1",
+  "workflowId": "research-ideation",
+  "revision": 1,
+  "profile": {
+    "kind": "bounded-flow",
+    "terminalNodeIds": ["terminal"]
+  },
+  "entryNodeId": "freeze-brief",
+  "nodes": [
+    { "id": "freeze-brief", "component": { "namespace": "researchstudio", "name": "freeze-brief", "version": "1.0.0" }, "dispatch": "fanout" },
+    { "id": "generate-1", "component": { "namespace": "researchstudio", "name": "generate", "version": "1.0.0" }, "input": { "branch": 1 } },
+    { "id": "coherence-1", "component": { "namespace": "researchstudio", "name": "coherence", "version": "1.0.0" }, "input": { "branch": 1 } },
+    { "id": "collision-1", "component": { "namespace": "researchstudio", "name": "collision", "version": "1.0.0" }, "input": { "branch": 1 } },
+    { "id": "audit-1", "component": { "namespace": "researchstudio", "name": "audit", "version": "1.0.0" }, "input": { "branch": 1 } },
+    { "id": "implementability-1", "component": { "namespace": "researchstudio", "name": "implementability", "version": "1.0.0" }, "input": { "branch": 1 } },
+    { "id": "generate-2", "component": { "namespace": "researchstudio", "name": "generate", "version": "1.0.0" }, "input": { "branch": 2 } },
+    { "id": "coherence-2", "component": { "namespace": "researchstudio", "name": "coherence", "version": "1.0.0" }, "input": { "branch": 2 } },
+    { "id": "collision-2", "component": { "namespace": "researchstudio", "name": "collision", "version": "1.0.0" }, "input": { "branch": 2 } },
+    { "id": "audit-2", "component": { "namespace": "researchstudio", "name": "audit", "version": "1.0.0" }, "input": { "branch": 2 } },
+    { "id": "implementability-2", "component": { "namespace": "researchstudio", "name": "implementability", "version": "1.0.0" }, "input": { "branch": 2 } },
+    { "id": "generate-3", "component": { "namespace": "researchstudio", "name": "generate", "version": "1.0.0" }, "input": { "branch": 3 } },
+    { "id": "coherence-3", "component": { "namespace": "researchstudio", "name": "coherence", "version": "1.0.0" }, "input": { "branch": 3 } },
+    { "id": "collision-3", "component": { "namespace": "researchstudio", "name": "collision", "version": "1.0.0" }, "input": { "branch": 3 } },
+    { "id": "audit-3", "component": { "namespace": "researchstudio", "name": "audit", "version": "1.0.0" }, "input": { "branch": 3 } },
+    { "id": "implementability-3", "component": { "namespace": "researchstudio", "name": "implementability", "version": "1.0.0" }, "input": { "branch": 3 } },
+    { "id": "aggregate", "join": "all", "component": { "namespace": "researchstudio", "name": "aggregate", "version": "1.0.0" } },
+    { "id": "terminal", "component": { "namespace": "summer", "name": "terminal-receipt", "version": "1.0.0" } }
+  ],
+  "edges": [
+    { "id": "freeze-to-1", "from": "freeze-brief", "to": "generate-1", "condition": { "kind": "always" } },
+    { "id": "freeze-to-2", "from": "freeze-brief", "to": "generate-2", "condition": { "kind": "always" } },
+    { "id": "freeze-to-3", "from": "freeze-brief", "to": "generate-3", "condition": { "kind": "always" } },
+    { "id": "1-generate-coherence", "from": "generate-1", "to": "coherence-1", "condition": { "kind": "node-succeeded" } },
+    { "id": "1-coherence-collision", "from": "coherence-1", "to": "collision-1", "condition": { "kind": "node-succeeded" } },
+    { "id": "1-collision-audit", "from": "collision-1", "to": "audit-1", "condition": { "kind": "node-succeeded" } },
+    { "id": "1-audit-implementability", "from": "audit-1", "to": "implementability-1", "condition": { "kind": "node-succeeded" } },
+    { "id": "1-to-aggregate", "from": "implementability-1", "to": "aggregate", "condition": { "kind": "node-succeeded" } },
+    { "id": "2-generate-coherence", "from": "generate-2", "to": "coherence-2", "condition": { "kind": "node-succeeded" } },
+    { "id": "2-coherence-collision", "from": "coherence-2", "to": "collision-2", "condition": { "kind": "node-succeeded" } },
+    { "id": "2-collision-audit", "from": "collision-2", "to": "audit-2", "condition": { "kind": "node-succeeded" } },
+    { "id": "2-audit-implementability", "from": "audit-2", "to": "implementability-2", "condition": { "kind": "node-succeeded" } },
+    { "id": "2-to-aggregate", "from": "implementability-2", "to": "aggregate", "condition": { "kind": "node-succeeded" } },
+    { "id": "3-generate-coherence", "from": "generate-3", "to": "coherence-3", "condition": { "kind": "node-succeeded" } },
+    { "id": "3-coherence-collision", "from": "coherence-3", "to": "collision-3", "condition": { "kind": "node-succeeded" } },
+    { "id": "3-collision-audit", "from": "collision-3", "to": "audit-3", "condition": { "kind": "node-succeeded" } },
+    { "id": "3-audit-implementability", "from": "audit-3", "to": "implementability-3", "condition": { "kind": "node-succeeded" } },
+    { "id": "3-to-aggregate", "from": "implementability-3", "to": "aggregate", "condition": { "kind": "node-succeeded" } },
+    { "id": "aggregate-terminal", "from": "aggregate", "to": "terminal", "condition": { "kind": "node-succeeded" } }
+  ],
+  "metadata": {
+    "provenance": "summer-owned fixture derived from observable autoresearch-ideation behavior",
+    "modelFree": true
+  }
+}

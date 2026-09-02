@@ -1,0 +1,22 @@
+{
+  "name": "@summer/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@summer/components": "workspace:*",
+    "@summer/compiler": "workspace:*",
+    "@summer/protocol": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b --pretty false",
+    "test": "vitest run"
+  }
+}
