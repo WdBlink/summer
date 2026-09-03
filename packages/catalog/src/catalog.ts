@@ -168,6 +168,35 @@ export function compileCatalog(
         return undefined;
       }
     );
+    if (entry.status === "available") {
+      const executableRuntime = entry.runtimeIds.some((runtimeId) => {
+        const runtime = runtimeById.get(runtimeId);
+        return runtime?.status === "available" && runtime.executorBindings;
+      });
+      if (!executableRuntime) {
+        issues.push({
+          code: "AVAILABLE_COMPONENT_NOT_EXECUTABLE",
+          message: `available component '${key}' has no available runtime with executor bindings`,
+          path: `components.${index}.runtimeIds`
+        });
+      }
+      if (!registry.hasExecutor(entry.component)) {
+        issues.push({
+          code: "AVAILABLE_COMPONENT_EXECUTOR_MISSING",
+          message: `available component '${key}' has no executor binding in the active registry`,
+          path: `components.${index}.component`
+        });
+      }
+      for (const schemaRef of [descriptor.inputSchema, descriptor.outputSchema]) {
+        if (!registry.hasSchemaBinding(schemaRef)) {
+          issues.push({
+            code: "AVAILABLE_COMPONENT_SCHEMA_BINDING_MISSING",
+            message: `available component '${key}' has no runtime binding for schema '${componentRefKey(schemaRef)}'`,
+            path: `components.${index}.component`
+          });
+        }
+      }
+    }
     compiledComponents.push({ ...entry, descriptor });
   }
 
@@ -210,6 +239,15 @@ export function compileCatalog(
         issues.push({
           code: "WORKFLOW_COMPONENT_NOT_CATALOGED",
           message: `workflow '${key}' uses uncataloged component '${componentKey}'`,
+          path: `workflows.${index}`
+        });
+      } else if (
+        entry.status === "available" &&
+        catalogComponentByKey.get(componentKey)?.status !== "available"
+      ) {
+        issues.push({
+          code: "AVAILABLE_WORKFLOW_USES_UNAVAILABLE_COMPONENT",
+          message: `available workflow '${key}' uses component '${componentKey}' that is not available`,
           path: `workflows.${index}`
         });
       }

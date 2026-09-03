@@ -1,8 +1,9 @@
 # `@summer/runtime-mastra`
 
 This package is Summer's dependency-isolated Mastra adapter. It does not own
-campaign scheduling, campaign state, frame checks, decision policy, leases, or
-receipts. Those remain Summer core responsibilities.
+campaign scheduling, campaign state, frame checks, decision policy, or leases.
+Those remain Summer core responsibilities. It does emit protocol-valid node
+attempt receipts and can stream them to a caller-provided observer.
 
 ## v0 support matrix
 
@@ -23,7 +24,8 @@ The supported fork branches must each be linear. Ordinary edges use `node-succee
 Every Summer node becomes a real Mastra step whose implementation resolves the
 exact component executor and input/output schema bindings from the
 `ComponentRegistry`. The adapter uses an envelope so intermediate outputs keep
-their node identity. A node with static `input` receives that value; otherwise a
+their node identity and receipts survive downstream execution and branch joins.
+A node with static `input` receives that value; otherwise a
 linear node receives its predecessor output. After `join: all`, the join node
 receives an object keyed by branch-tail node ID.
 

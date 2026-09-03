@@ -12,6 +12,7 @@ import {
   type ComponentEffect,
   type ComponentKind,
   type JsonValue,
+  type NodeReceiptV1,
   type WorkflowEdgeV1
 } from "@summer/protocol";
 
@@ -215,6 +216,11 @@ describe("Mastra v0 adapter", () => {
     const envelope = SummerMastraEnvelopeV1Schema.parse(result.result);
     expect(envelope.current).toBe(6);
     expect(envelope.outputs).toEqual({ first: 3, second: 6 });
+    expect(envelope.receipts).toMatchObject([
+      {nodeId: "first", attempt: 1, status: "succeeded"},
+      {nodeId: "second", attempt: 1, status: "succeeded"}
+    ]);
+    expect(envelope.receipts.every(({outputDigest}) => outputDigest !== undefined)).toBe(true);
     expect(contexts).toMatchObject([
       { nodeId: "first", attempt: 1 },
       { nodeId: "second", attempt: 1 }
@@ -268,6 +274,7 @@ describe("Mastra v0 adapter", () => {
 
   it("enforces node timeouts and aborts the component signal", async () => {
     let observedAbort = false;
+    const receipts: NodeReceiptV1[] = [];
     const slow = component(
       "slow",
       (_input, context) =>
@@ -286,7 +293,11 @@ describe("Mastra v0 adapter", () => {
       [{ id: "slow", component: slow, timeoutMs: 5 }],
       []
     );
-    const { workflow } = createMastraWorkflow(compiled, makeRegistry([slow]));
+    const { workflow } = createMastraWorkflow(compiled, makeRegistry([slow]), {
+      onReceipt: (receipt) => {
+        receipts.push(receipt);
+      }
+    });
     const result = await (await workflow.createRun()).start({
       inputData: { schemaVersion: "summer.mastra-run-input/v1", input: "wait" }
     });
@@ -294,6 +305,12 @@ describe("Mastra v0 adapter", () => {
     expect(observedAbort).toBe(true);
     if (result.status !== "failed") throw new Error("expected failure");
     expect(result.error).toMatchObject({ code: "MASTRA_COMPONENT_TIMEOUT" });
+    expect(receipts).toMatchObject([
+      {
+        status: "failed",
+        error: {code: "MASTRA_COMPONENT_TIMEOUT"}
+      }
+    ]);
   });
 
   it("executes one structured fork/join with deterministic join input", async () => {

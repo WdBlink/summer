@@ -6,7 +6,7 @@ The project is an independent implementation inspired by useful Flow/Loop ideas 
 
 ## Status
 
-Summer is at the walking-skeleton stage. It now includes one serializable workflow source format and compiled IR, deterministic semantic digests, an append-only in-memory campaign ledger, a tested Mastra adapter for bounded child flows, a complete fixture capability catalog, explainable matching, and extension-design validation. It does not yet provide production executor bindings, a durable database, campaign daemon, scheduler, or live trading system.
+Summer now has its first executable bounded Flow: `research-ideation@2`, a typed Mastra wrapper around ResearchStudio Idea Spark's canonical navigator. It includes production executor/schema bindings, six isolated execution stages, terminal artifact verification, and a `NodeReceipt` for every Mastra node. The factor workflows remain conformance fixtures. Durable campaign storage, a campaign daemon, scheduler, human-gate suspension, and live trading are not implemented.
 
 ## Architectural invariants
 
@@ -27,6 +27,7 @@ packages/compiler        Static workflow compiler and invariant checks
 packages/catalog         Capability catalog, matching, and extension validation
 packages/core            Event reducer, campaign ledger, and public facade
 packages/runtime-mastra  Mastra adapter boundary
+packages/research-ideation  Executable Idea Spark component pack
 packages/cli             Stable command-line entrypoint
 skills/summer            Thin Codex skill
 catalog                  Discoverable workflow/component/runtime metadata
@@ -43,15 +44,18 @@ pnpm validate
 pnpm --silent summer fixtures
 pnpm --silent summer catalog
 pnpm --silent summer match-intent "生成经过审计的研究构思"
-pnpm --silent summer compile fixtures/workflows/research-ideation.v1.json
+pnpm --silent summer compile workflows/research-ideation.v2.json
+pnpm --silent summer run research-ideation /absolute/path/to/request.json
 ```
 
-`validate` checks the strict source contract. `compile` additionally resolves the fixture-only exact-version registry and checks graph, effect, retry, join, campaign-policy, and terminal-path invariants. The semantic digests are deterministic; `compiledAt` is observational, does not participate in `compiledDigest`, and may differ between compilations.
+`validate` checks the strict source contract. `compile` additionally resolves the repository exact-version registry and checks graph, effect, retry, join, campaign-policy, and terminal-path invariants. The semantic digests are deterministic; `compiledAt` is observational, does not participate in `compiledDigest`, and may differ between compilations.
 
 The Mastra v0 adapter executes linear bounded flows and one structured `fork → join: all`. It deliberately rejects campaign control, `join: any`, failure routing, human suspension, and non-idempotent writes instead of weakening their semantics. See [`packages/runtime-mastra/README.md`](packages/runtime-mastra/README.md).
 
-The CLI exposes `catalog`, `match-intent`, typed `match`, and `extension-check` in addition to `validate`, `compile`, and `fixtures`. Matching is deterministic and explainable; it reports ambiguity, capability gaps, and whether the result is actually dispatchable. The current catalog is complete for the fixture registry, but every entry and runtime is still marked `fixture` and has no executor bindings, so matching does not pretend that these workflows can run in production.
+The CLI exposes `catalog`, `match-intent`, typed `match`, `run`, and `extension-check` in addition to `validate`, `compile`, and `fixtures`. Matching is deterministic and explainable; it reports ambiguity, capability gaps, and whether a result is actually dispatchable. An `available` component now fails catalog compilation unless its runtime, executor, and schema bindings really exist.
 
-`extension-check` forces secondary development through the same catalog, exact-version schemas, component descriptors, permission/effect contracts, runtime validators, and conformance fixtures. A valid proposal is design input, not an installed component. The Mastra adapter is still not wired to the campaign ledger and does not emit `NodeReceipt` records. `SummerCore.start()` accepts only verified `iterative-campaign` manifests; bounded flows execute directly through a runtime adapter.
+`extension-check` forces secondary development through the same catalog, exact-version schemas, component descriptors, permission/effect contracts, runtime validators, and conformance fixtures. A valid proposal is design input, not an installed component. The Mastra adapter emits node receipts but is not wired to the campaign ledger. `SummerCore.start()` accepts only verified `iterative-campaign` manifests; bounded flows execute directly through a runtime adapter.
+
+See [the research-ideation Flow guide](docs/workflows/research-ideation.md) for its request contract, execution boundary, resume behavior, and dependencies.
 
 See [ADR 0001](docs/adr/0001-summer-workflow-v1.md) for the unified workflow protocol and [ADR 0002](docs/adr/0002-capability-catalog-and-extension-gate.md) for controlled matching and secondary-development boundaries.

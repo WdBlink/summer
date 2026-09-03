@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -12,8 +13,16 @@ import { WorkflowCompileError, compileWorkflow } from "@summer/compiler";
 import {
   parseWorkflowSpecV1,
   type CompiledWorkflowV1,
+  type NodeReceiptV1,
   type WorkflowSpecV1
 } from "@summer/protocol";
+import type { ResearchIdeationRegistryOptions } from "@summer/research-ideation";
+import {
+  SummerMastraEnvelopeV1Schema,
+  createMastraWorkflow,
+  type MastraAdapterPlanV1,
+  type SummerMastraEnvelopeV1
+} from "@summer/runtime-mastra";
 
 import {
   FIXTURE_CONFORMANCE_REGISTRY_ID,
@@ -21,7 +30,9 @@ import {
 } from "./conformance-registry.js";
 import { FIXTURE_WORKFLOWS } from "./fixtures.js";
 import {
+  REPOSITORY_REGISTRY_ID,
   compileRepositoryCatalog,
+  createRepositoryRegistry,
   repositoryRuntimeValidators
 } from "./repository-catalog.js";
 
@@ -46,11 +57,24 @@ export interface WorkflowCompilationResult {
   readonly command: "compile";
   readonly file: string;
   readonly registry: {
-    readonly id: typeof FIXTURE_CONFORMANCE_REGISTRY_ID;
+    readonly id: string;
     readonly registryDigest: string;
-    readonly executorBindings: false;
+    readonly executorBindings: boolean;
   };
   readonly workflow: CompiledWorkflowV1;
+}
+
+export interface WorkflowRunResult {
+  readonly ok: true;
+  readonly command: "run";
+  readonly workflowId: string;
+  readonly revision: number;
+  readonly inputFile: string;
+  readonly runId: string;
+  readonly compiledWorkflowDigest: string;
+  readonly registryDigest: string;
+  readonly plan: MastraAdapterPlanV1;
+  readonly result: SummerMastraEnvelopeV1;
 }
 
 export interface FixtureCompilationSummary {
@@ -198,19 +222,22 @@ export function validateWorkflowFile(filePath: string): WorkflowValidationResult
 
 export function compileWorkflowFile(filePath: string): WorkflowCompilationResult {
   const { absolutePath, workflow } = readWorkflowFile(filePath);
-  const registry = createFixtureConformanceRegistry();
+  const registry = createRepositoryRegistry();
 
   try {
+    const compiled = compileWorkflow(workflow, registry);
     return {
       ok: true,
       command: "compile",
       file: absolutePath,
       registry: {
-        id: FIXTURE_CONFORMANCE_REGISTRY_ID,
+        id: REPOSITORY_REGISTRY_ID,
         registryDigest: registry.digest(),
-        executorBindings: false
+        executorBindings: compiled.nodes.every((node) =>
+          registry.hasExecutor(node.component)
+        )
       },
-      workflow: compileWorkflow(workflow, registry)
+      workflow: compiled
     };
   } catch (error) {
     if (error instanceof WorkflowCompileError) {
@@ -222,6 +249,104 @@ export function compileWorkflowFile(filePath: string): WorkflowCompilationResult
     }
     throw error;
   }
+}
+
+export async function runRepositoryWorkflow(
+  projectRoot: string,
+  workflowId: string,
+  inputFilePath: string,
+  registryOptions: ResearchIdeationRegistryOptions = {}
+): Promise<WorkflowRunResult> {
+  const { absolutePath, value } = readJsonFile(inputFilePath);
+  const catalog = compileRepositoryCatalog(projectRoot);
+  const entry = catalog.workflows.find(
+    (candidate) => candidate.workflowId === workflowId
+  );
+  if (entry === undefined) {
+    throw new SummerCliOperationError(
+      "WORKFLOW_NOT_FOUND",
+      `Workflow '${workflowId}' is not present in the repository catalog`
+    );
+  }
+  const runtimeById = new Map(
+    catalog.runtimes.map((runtime) => [runtime.runtimeId, runtime])
+  );
+  const executable =
+    entry.status === "available" &&
+    entry.profile === "bounded-flow" &&
+    entry.runtimeIds.includes("mastra-v0") &&
+    runtimeById.get("mastra-v0")?.status === "available" &&
+    runtimeById.get("mastra-v0")?.executorBindings === true;
+  if (!executable) {
+    throw new SummerCliOperationError(
+      "WORKFLOW_NOT_DISPATCHABLE",
+      `Workflow '${workflowId}@${entry.revision}' is cataloged but not dispatchable`,
+      {status: entry.status, runtimeIds: entry.runtimeIds}
+    );
+  }
+
+  const registry = createRepositoryRegistry(registryOptions);
+  const source = readWorkflowFile(resolve(projectRoot, entry.sourcePath)).workflow;
+  let compiled: CompiledWorkflowV1;
+  try {
+    compiled = compileWorkflow(source, registry);
+  } catch (error) {
+    if (error instanceof WorkflowCompileError) {
+      throw new SummerCliOperationError(
+        error.code,
+        `Workflow '${workflowId}@${entry.revision}' failed compilation`,
+        error.issues
+      );
+    }
+    throw error;
+  }
+  if (compiled.compiledDigest !== entry.compiledWorkflowDigest) {
+    throw new SummerCliOperationError(
+      "CATALOG_WORKFLOW_DIGEST_MISMATCH",
+      `Workflow '${workflowId}@${entry.revision}' differs from its compiled catalog entry`
+    );
+  }
+
+  const observedReceipts: NodeReceiptV1[] = [];
+  const binding = createMastraWorkflow(compiled, registry, {
+    onReceipt: (receipt) => {
+      observedReceipts.push(receipt);
+    }
+  });
+  const runId = `run-${randomUUID()}`;
+  const run = await binding.workflow.createRun({runId});
+  const execution = await run.start({
+    inputData: {
+      schemaVersion: "summer.mastra-run-input/v1",
+      input: value
+    }
+  });
+  if (execution.status !== "success") {
+    throw new SummerCliOperationError(
+      "WORKFLOW_EXECUTION_FAILED",
+      `Workflow '${workflowId}@${entry.revision}' did not complete successfully`,
+      execution.status === "failed"
+        ? {
+            status: execution.status,
+            error: nodeErrorDetails(execution.error),
+            receipts: observedReceipts
+          }
+        : {status: execution.status}
+    );
+  }
+
+  return {
+    ok: true,
+    command: "run",
+    workflowId: compiled.workflowId,
+    revision: compiled.revision,
+    inputFile: absolutePath,
+    runId,
+    compiledWorkflowDigest: compiled.compiledDigest,
+    registryDigest: compiled.registryDigest,
+    plan: binding.plan,
+    result: SummerMastraEnvelopeV1Schema.parse(execution.result)
+  };
 }
 
 export function compileFixtureWorkflows(projectRoot: string): FixtureCompilationResult {
@@ -343,7 +468,7 @@ export function checkRepositoryExtension(
   const catalog = compileRepositoryCatalog(projectRoot);
   const result = validateExtensionProposal(value, {
     catalog,
-    registry: createFixtureConformanceRegistry(),
+    registry: createRepositoryRegistry(),
     runtimeWorkflowValidators: repositoryRuntimeValidators()
   });
   return {

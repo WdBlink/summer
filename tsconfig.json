@@ -6,6 +6,7 @@
     { "path": "packages/compiler" },
     { "path": "packages/catalog" },
     { "path": "packages/core" },
+    { "path": "packages/research-ideation" },
     { "path": "packages/runtime-mastra" },
     { "path": "packages/cli" }
   ]

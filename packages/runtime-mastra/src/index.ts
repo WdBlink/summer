@@ -6,7 +6,8 @@ export {
   type MastraAdapterPlanV1,
   type MastraLinearPlanV1,
   type MastraSingleForkJoinPlanV1,
-  type MastraWorkflowBinding
+  type MastraWorkflowBinding,
+  type MastraWorkflowOptions
 } from "./adapter.js";
 export {
   MASTRA_ENVELOPE_SCHEMA_VERSION,

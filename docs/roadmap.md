@@ -19,11 +19,13 @@
 - Extension validation for reuse evidence, schemas, permissions, effects, retry/authorization policy, runtime conformance, and test plans
 - `$summer` routing and secondary-development guidance with progressive matching/extension references
 
-## Milestone 1 — executable bounded Flow
+## Milestone 1 — executable bounded Flow (in progress)
 
-- Production component packs and provider-neutral agent executors
-- Promote catalog entries from `fixture` to `available` only with real executor bindings
-- NodeReceipt emission around every adapter execution
+- First production component pack: ResearchStudio Idea Spark (`research-ideation@2`)
+- Catalog promotion guarded by real runtime, executor, and schema bindings
+- `NodeReceipt` emission around every Mastra node attempt
+- CLI dispatch for available bounded workflows
+- Additional production component packs and provider-neutral agent executors
 - Artifact store contract and content-addressed evidence
 - Typed human-gate suspend/resume
 - Failure routes and safe replay for idempotent effects

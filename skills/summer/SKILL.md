@@ -15,6 +15,7 @@ Locate the checkout and verify the CLI before routing. Cloning the repository do
 SUMMER_REPO=/absolute/path/to/summer
 pnpm --silent --dir "$SUMMER_REPO" summer catalog
 pnpm --silent --dir "$SUMMER_REPO" summer match-intent "the user's request"
+pnpm --silent --dir "$SUMMER_REPO" summer run research-ideation /absolute/path/to/request.json
 pnpm --silent --dir "$SUMMER_REPO" summer match /absolute/path/to/match-request.json
 pnpm --silent --dir "$SUMMER_REPO" summer extension-check /absolute/path/to/proposal.json
 pnpm --silent --dir "$SUMMER_REPO" summer validate /absolute/path/to/workflow.json
@@ -31,6 +32,7 @@ Run `match-intent` for ordinary natural-language requests. Use a typed `summer.m
 - Treat `ambiguous` as a user choice, not permission to pick the first candidate.
 - Treat `no-match` or `capabilityGaps` as an extension candidate.
 - Check `dispatchable` before proposing execution. If false, report the exact blockers; a fixture or descriptor is not a runnable capability.
+- When the selected bounded Flow is dispatchable and the user asked to execute it, use `summer run <workflow-id> <input.json>`; never bypass the selected runtime with an ad-hoc prompt chain.
 
 ## Frame an extension
 
@@ -40,7 +42,7 @@ A valid proposal is admissible design input, not implemented code and not a regi
 
 ## Runtime boundary
 
-If a user asks to start, resume, schedule, or persist a production campaign before those commands and executor bindings exist, report the unsupported boundary. Do not simulate it with Skill-owned state, repeated prompts, cron, or direct Mastra internals.
+`research-ideation@2` is executable through `summer run`. Its request must conform to `summer.research-ideation-request/v1`, and resumption uses the identical query and run directory. Iterative production campaigns are still unsupported: if a user asks to start, resume, schedule, or persist one, report that boundary. Do not simulate campaign state with Skill-owned state, repeated prompts, cron, or direct Mastra internals.
 
 ## Operating rules
 

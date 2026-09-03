@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "summer.workflow/v1",
+  "workflowId": "research-ideation",
+  "revision": 2,
+  "profile": {
+    "kind": "bounded-flow",
+    "terminalNodeIds": ["verify-terminal"]
+  },
+  "entryNodeId": "freeze-request",
+  "nodes": [
+    {
+      "id": "freeze-request",
+      "component": {
+        "namespace": "researchstudio",
+        "name": "idea-spark-prepare",
+        "version": "1.0.0"
+      }
+    },
+    {
+      "id": "run-idea-spark",
+      "component": {
+        "namespace": "researchstudio",
+        "name": "idea-spark-runner",
+        "version": "1.0.0"
+      },
+      "timeoutMs": 7200000,
+      "idempotencyKey": "idea-spark-runner-v1"
+    },
+    {
+      "id": "verify-terminal",
+      "component": {
+        "namespace": "researchstudio",
+        "name": "idea-spark-verify",
+        "version": "1.0.0"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "freeze-to-run",
+      "from": "freeze-request",
+      "to": "run-idea-spark",
+      "condition": {"kind": "node-succeeded"}
+    },
+    {
+      "id": "run-to-verify",
+      "from": "run-idea-spark",
+      "to": "verify-terminal",
+      "condition": {"kind": "node-succeeded"}
+    }
+  ],
+  "metadata": {
+    "domainProtocol": "idea-spark/next",
+    "internalStages": [
+      "literature-grounding",
+      "bottleneck-diagnosis",
+      "candidate-generation",
+      "coherence-collision",
+      "quality-gauntlet",
+      "package-render"
+    ],
+    "terminalStates": ["done", "do-not-generate", "phase-3-failed"]
+  }
+}

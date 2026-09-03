@@ -14,6 +14,7 @@ export {
   matchRepositoryCatalog,
   readJsonFile,
   readWorkflowFile,
+  runRepositoryWorkflow,
   validateWorkflowFile,
   type CatalogInspectionResult,
   type CatalogIntentMatchCommandResult,
@@ -22,11 +23,14 @@ export {
   type FixtureCompilationResult,
   type FixtureCompilationSummary,
   type WorkflowCompilationResult,
+  type WorkflowRunResult,
   type WorkflowValidationResult
 } from "./commands.js";
 export {
   REPOSITORY_CATALOG_PATH,
+  REPOSITORY_REGISTRY_ID,
   compileRepositoryCatalog,
+  createRepositoryRegistry,
   repositoryRuntimeValidators
 } from "./repository-catalog.js";
 export { SUMMER_PROJECT_ROOT, runCli, type CliIo } from "./cli.js";

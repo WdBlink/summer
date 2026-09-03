@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ComponentRegistry } from "@summer/components";
-import type { SummerCatalogV1 } from "@summer/protocol";
+import { JsonValueSchema, type SummerCatalogV1 } from "@summer/protocol";
 
 import {
   compileCatalog,
@@ -21,12 +21,12 @@ const componentRef = {
 } as const;
 
 function registry(): ComponentRegistry {
-  return new ComponentRegistry()
+  const result = new ComponentRegistry()
     .registerSchema({
       schemaVersion: "summer.schema-descriptor/v1",
       ref: schemaRef,
       jsonSchema: { type: "object" }
-    })
+    }, JsonValueSchema)
     .registerDescriptor({
       schemaVersion: "summer.component-descriptor/v1",
       ref: componentRef,
@@ -38,6 +38,8 @@ function registry(): ComponentRegistry {
       effect: "none",
       supportsFanout: false
     });
+  result.bindExecutor(componentRef, (input) => input);
+  return result;
 }
 
 function catalogSource(): SummerCatalogV1 {
@@ -71,7 +73,7 @@ function catalogSource(): SummerCatalogV1 {
         capabilities: ["runtime.test"],
         limitations: [],
         persistence: "none",
-        executorBindings: false
+        executorBindings: true
       }
     ]
   };
@@ -110,6 +112,35 @@ describe("Summer catalog", () => {
       }
     });
     expect(result.workflows.status).toBe("not-requested");
+  });
+
+  it("rejects available catalog entries without real runtime bindings", () => {
+    const unbound = new ComponentRegistry()
+      .registerSchema({
+        schemaVersion: "summer.schema-descriptor/v1",
+        ref: schemaRef,
+        jsonSchema: {type: "object"}
+      })
+      .registerDescriptor({
+        schemaVersion: "summer.component-descriptor/v1",
+        ref: componentRef,
+        kind: "tool",
+        inputSchema: schemaRef,
+        outputSchema: schemaRef,
+        capabilities: ["test.echo"],
+        permissions: [],
+        effect: "none",
+        supportsFanout: false
+      });
+
+    expect(() => compileCatalog(catalogSource(), unbound, [])).toThrowError(
+      expect.objectContaining({
+        issues: expect.arrayContaining([
+          expect.objectContaining({code: "AVAILABLE_COMPONENT_EXECUTOR_MISSING"}),
+          expect.objectContaining({code: "AVAILABLE_COMPONENT_SCHEMA_BINDING_MISSING"})
+        ])
+      })
+    );
   });
 
   it("fails closed on unsafe non-idempotent component proposals", () => {

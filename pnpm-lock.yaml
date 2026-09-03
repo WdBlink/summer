@@ -54,6 +54,9 @@ importers:
       '@summer/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@summer/research-ideation':
+        specifier: workspace:*
+        version: link:../research-ideation
       '@summer/runtime-mastra':
         specifier: workspace:*
         version: link:../runtime-mastra
@@ -103,6 +106,28 @@ importers:
       zod:
         specifier: 4.5.4
         version: 4.5.4
+
+  packages/research-ideation:
+    dependencies:
+      '@summer/components':
+        specifier: workspace:*
+        version: link:../components
+      '@summer/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      zod:
+        specifier: 4.5.4
+        version: 4.5.4
+    devDependencies:
+      '@types/node':
+        specifier: 22.20.1
+        version: 22.20.1
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: 4.1.11
+        version: 4.1.11(@types/node@22.20.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(tsx@4.23.13))
 
   packages/runtime-mastra:
     dependencies:

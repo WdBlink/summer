@@ -35,4 +35,4 @@ The `$summer` Skill translates user intent, invokes these contracts, explains th
 
 ## Current limit
 
-The current catalog covers the fixture registry only. It can recommend and validate designs, but no cataloged workflow is dispatchable until production component packs, executor bindings, receipt emission, and durable campaign infrastructure are implemented.
+`research-ideation@2` is the first available, dispatchable bounded Flow. Its exact component schemas, executors, Mastra runtime conformance, receipt emission, and terminal artifact checks are registered together. The factor workflows and campaign runtime remain fixtures; durable campaign infrastructure is still not implemented.

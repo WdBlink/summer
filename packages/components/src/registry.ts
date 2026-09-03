@@ -176,6 +176,16 @@ export class ComponentRegistry {
     return executor;
   }
 
+  public hasSchemaBinding(refInput: ExactSchemaRef): boolean {
+    const ref = ExactSchemaRefSchema.parse(refInput);
+    return this.#schemaBindings.has(registryKey(ref));
+  }
+
+  public hasExecutor(refInput: ExactComponentRef): boolean {
+    const ref = ExactComponentRefSchema.parse(refInput);
+    return this.#executors.has(registryKey(ref));
+  }
+
   public snapshot(): ComponentRegistrySnapshotV1 {
     const byReference = <T extends { ref: ExactComponentRef | ExactSchemaRef }>(
       left: T,

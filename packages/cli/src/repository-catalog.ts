@@ -8,16 +8,30 @@ import {
 } from "@summer/catalog";
 import { compileWorkflow } from "@summer/compiler";
 import { SummerCatalogV1Schema } from "@summer/protocol";
+import {
+  registerResearchIdeationComponents,
+  type ResearchIdeationRegistryOptions
+} from "@summer/research-ideation";
 import { planMastraWorkflow } from "@summer/runtime-mastra";
 
 import { createFixtureConformanceRegistry } from "./conformance-registry.js";
 
 export const REPOSITORY_CATALOG_PATH = "catalog/summer.catalog.v1.json";
+export const REPOSITORY_REGISTRY_ID = "summer.repository-registry/v1" as const;
+
+export function createRepositoryRegistry(
+  options: ResearchIdeationRegistryOptions = {}
+) {
+  return registerResearchIdeationComponents(
+    createFixtureConformanceRegistry(),
+    options
+  );
+}
 
 export function compileRepositoryCatalog(
   projectRoot: string
 ): CompiledSummerCatalogV1 {
-  const registry = createFixtureConformanceRegistry();
+  const registry = createRepositoryRegistry();
   const source = SummerCatalogV1Schema.parse(
     readJson(resolve(projectRoot, REPOSITORY_CATALOG_PATH))
   );

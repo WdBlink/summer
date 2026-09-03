@@ -1,15 +1,12 @@
 {
-  "name": "@summer/cli",
+  "name": "@summer/research-ideation",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "bin": {
-    "summer": "./dist/cli.js"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "default": "./dist/index.js"
     }
   },
   "main": "./dist/index.js",
@@ -19,15 +16,12 @@
     "build": "tsc -b",
     "clean": "tsc -b --clean",
     "typecheck": "tsc -b --pretty false",
-    "test": "vitest run src"
+    "test": "vitest run --root ../.. packages/research-ideation/src/research-ideation.test.ts"
   },
   "dependencies": {
-    "@summer/catalog": "workspace:*",
-    "@summer/compiler": "workspace:*",
     "@summer/components": "workspace:*",
     "@summer/protocol": "workspace:*",
-    "@summer/research-ideation": "workspace:*",
-    "@summer/runtime-mastra": "workspace:*"
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@types/node": "22.20.1",

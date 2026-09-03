@@ -8,11 +8,7 @@
   },
   "include": ["src/**/*.ts"],
   "references": [
-    { "path": "../protocol" },
-    { "path": "../components" },
-    { "path": "../compiler" },
-    { "path": "../catalog" },
-    { "path": "../research-ideation" },
-    { "path": "../runtime-mastra" }
+    {"path": "../protocol"},
+    {"path": "../components"}
   ]
 }

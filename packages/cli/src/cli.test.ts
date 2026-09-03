@@ -1,8 +1,22 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
+import type {
+  IdeaSparkDriver,
+  IdeaSparkNavigatorCategory,
+  IdeaSparkNavigatorSnapshotV1,
+  IdeaSparkPreparedV1,
+  IdeaSparkStage,
+  IdeaSparkStageAdvance
+} from "@summer/research-ideation";
 
 import {
   FIXTURE_CONFORMANCE_REGISTRY_ID,
@@ -102,7 +116,7 @@ describe("fixture conformance registry", () => {
 
     expect(catalog.componentCoverage).toBe("complete");
     expect(catalog.workflows).toHaveLength(3);
-    expect(catalog.components).toHaveLength(20);
+    expect(catalog.components).toHaveLength(23);
     expect(catalog.runtimes.map(({ runtimeId }) => runtimeId)).toEqual([
       "mastra-v0",
       "summer-core-v0"
@@ -262,11 +276,79 @@ describe("runCli", () => {
           status: "matched",
           selected: {
             workflowId: "research-ideation",
-            dispatchable: false
+            revision: 2,
+            dispatchable: true
           }
         }
       }
     });
+  });
+
+  it("runs the available research-ideation flow through Mastra", async () => {
+    const directory = mkdtempSync(resolve(tmpdir(), "summer-run-"));
+    const workspaceDir = resolve(directory, "workspace");
+    const runDir = resolve(workspaceDir, "ideaspark_run", "test-idea");
+    const inputFile = resolve(directory, "input.json");
+    mkdirSync(workspaceDir, {recursive: true});
+    writeFileSync(
+      inputFile,
+      JSON.stringify({
+        schemaVersion: "summer.research-ideation-request/v1",
+        query: "Find one testable uncertainty-aware geometry idea",
+        workspaceDir,
+        runDir
+      }),
+      "utf8"
+    );
+
+    try {
+      const driver = new FakeIdeaSparkDriver();
+      const captured = captureIo();
+      const exitCode = await runCli(
+        ["run", "research-ideation", inputFile],
+        captured.io,
+        SUMMER_PROJECT_ROOT,
+        {driver}
+      );
+
+      expect(exitCode).toBe(0);
+      expect(captured.stderr).toEqual([]);
+      const output = JSON.parse(captured.stdout[0]!);
+      expect(output).toMatchObject({
+        ok: true,
+        command: "run",
+        workflowId: "research-ideation",
+        revision: 2,
+        plan: {
+          executionShape: "linear",
+          nodeOrder: ["freeze-request", "run-idea-spark", "verify-terminal"]
+        },
+        result: {
+          current: {
+            schemaVersion: "summer.research-ideation-result/v1",
+            status: "done",
+            runDir
+          }
+        }
+      });
+      expect(output.result.receipts).toHaveLength(3);
+      expect(output.result.receipts.map((receipt: {nodeId: string}) => receipt.nodeId)).toEqual([
+        "freeze-request",
+        "run-idea-spark",
+        "verify-terminal"
+      ]);
+      expect(output.result.receipts[2].artifactRefs).toHaveLength(3);
+      expect(driver.stages).toEqual([
+        "literature-grounding",
+        "bottleneck-diagnosis",
+        "candidate-generation",
+        "coherence-collision",
+        "quality-gauntlet",
+        "package-render"
+      ]);
+    } finally {
+      rmSync(directory, {recursive: true, force: true});
+    }
   });
 
   it("matches a Chinese iterative-research request to the factor campaign", async () => {
@@ -443,3 +525,52 @@ describe("runCli", () => {
     });
   });
 });
+
+const CATEGORY_AFTER_STAGE: Readonly<Record<IdeaSparkStage, IdeaSparkNavigatorCategory>> = {
+  "literature-grounding": "phase1",
+  "bottleneck-diagnosis": "phase2-generation",
+  "candidate-generation": "phase2-coherence",
+  "coherence-collision": "phase3",
+  "quality-gauntlet": "phase4",
+  "package-render": "terminal"
+};
+
+class FakeIdeaSparkDriver implements IdeaSparkDriver {
+  readonly stages: IdeaSparkStage[] = [];
+  #category: IdeaSparkNavigatorCategory = "phase0";
+
+  async inspect(): Promise<IdeaSparkNavigatorSnapshotV1> {
+    return snapshot(this.#category);
+  }
+
+  async advance(
+    stage: IdeaSparkStage,
+    request: IdeaSparkPreparedV1
+  ): Promise<IdeaSparkStageAdvance> {
+    this.stages.push(stage);
+    this.#category = CATEGORY_AFTER_STAGE[stage];
+    if (this.#category === "terminal") {
+      const phase4 = resolve(request.runDir, "phase4");
+      mkdirSync(phase4, {recursive: true});
+      for (const file of ["idea.std.zh.md", "idea.std.en.md", "idea.detail.en.md"]) {
+        writeFileSync(resolve(phase4, file), `# ${file}\n`, "utf8");
+      }
+    }
+    return {snapshot: snapshot(this.#category)};
+  }
+}
+
+function snapshot(
+  category: IdeaSparkNavigatorCategory
+): IdeaSparkNavigatorSnapshotV1 {
+  const terminal = category === "terminal";
+  return {
+    schemaVersion: "summer.idea-spark-navigator-snapshot/v1",
+    state: terminal ? "DONE — all cards complete" : `state-${category}`,
+    step: terminal ? "No further action" : `step-${category}`,
+    type: terminal ? "terminal" : "llm_subagent",
+    category,
+    digest: "a".repeat(64),
+    ...(terminal ? {terminalStatus: "done" as const} : {})
+  };
+}

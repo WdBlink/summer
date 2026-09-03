@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "summer.extension-proposal/v1",
+  "proposalId": "research-ideation-workflow-v2",
+  "kind": "workflow",
+  "rationale": "Replace the obsolete three-candidate fixture with one reviewer-defensible Idea Spark run whose canonical internal navigator remains authoritative for its bounded retry and audit branches.",
+  "requestedCapabilities": [
+    "workflow.research.ideation",
+    "workflow.research.idea-spark"
+  ],
+  "reuseAssessment": {
+    "catalogDigest": "6d7e43e61965c903a3a9c738fbd44bee9793ee7e1fc12bded1217645ad1e1c5a",
+    "reviewedWorkflowIds": ["research-ideation"],
+    "reviewedComponents": [
+      {"namespace": "researchstudio", "name": "idea-spark-prepare", "version": "1.0.0"},
+      {"namespace": "researchstudio", "name": "idea-spark-runner", "version": "1.0.0"},
+      {"namespace": "researchstudio", "name": "idea-spark-verify", "version": "1.0.0"}
+    ],
+    "conclusion": "add-workflow",
+    "justification": "The existing revision is a non-executable three-branch fixture and does not represent Idea Spark's current single-candidate phase graph. Revision 2 composes the newly validated exact-version production components."
+  },
+  "verification": {
+    "contractCases": ["a prepared request executes exactly one nested Idea Spark run and terminates only after independent artifact verification"],
+    "failureCases": ["unknown schemas, unavailable executors, nonterminal navigation, or missing final cards fail closed"],
+    "conformanceFixtures": ["packages/research-ideation/src/research-ideation.test.ts"],
+    "idempotencyCases": ["the runner node has one explicit idempotency identity and the underlying run manifest rejects conflicting replay"]
+  },
+  "workflow": {
+    "schemaVersion": "summer.workflow/v1",
+    "workflowId": "research-ideation",
+    "revision": 2,
+    "profile": {
+      "kind": "bounded-flow",
+      "terminalNodeIds": ["verify-terminal"]
+    },
+    "entryNodeId": "freeze-request",
+    "nodes": [
+      {
+        "id": "freeze-request",
+        "component": {"namespace": "researchstudio", "name": "idea-spark-prepare", "version": "1.0.0"}
+      },
+      {
+        "id": "run-idea-spark",
+        "component": {"namespace": "researchstudio", "name": "idea-spark-runner", "version": "1.0.0"},
+        "timeoutMs": 7200000,
+        "idempotencyKey": "idea-spark-runner-v1"
+      },
+      {
+        "id": "verify-terminal",
+        "component": {"namespace": "researchstudio", "name": "idea-spark-verify", "version": "1.0.0"}
+      }
+    ],
+    "edges": [
+      {"id": "freeze-to-run", "from": "freeze-request", "to": "run-idea-spark", "condition": {"kind": "node-succeeded"}},
+      {"id": "run-to-verify", "from": "run-idea-spark", "to": "verify-terminal", "condition": {"kind": "node-succeeded"}}
+    ],
+    "metadata": {
+      "domainProtocol": "idea-spark/next",
+      "internalStages": ["literature-grounding", "bottleneck-diagnosis", "candidate-generation", "coherence-collision", "quality-gauntlet", "package-render"],
+      "terminalStates": ["done", "do-not-generate", "phase-3-failed"]
+    }
+  },
+  "catalogEntry": {
+    "schemaVersion": "summer.workflow-catalog-entry/v1",
+    "workflowId": "research-ideation",
+    "revision": 2,
+    "profile": "bounded-flow",
+    "title": "Research ideation with Idea Spark",
+    "summary": "Generate one literature-grounded, reviewer-defensible and implementable research idea through the canonical Idea Spark workflow.",
+    "sourcePath": "workflows/research-ideation.v2.json",
+    "status": "candidate",
+    "capabilities": ["workflow.research.ideation", "workflow.research.idea-spark"],
+    "selectors": {
+      "phrases": ["idea spark", "research ideation", "研究构思", "研究想法", "创新性分析"],
+      "keywords": ["idea", "ideation", "novelty", "research", "构思", "创新", "研究", "选题"],
+      "domains": ["科研", "论文", "research"]
+    },
+    "runtimeIds": ["mastra-v0"]
+  },
+  "implementation": {
+    "sourcePath": "workflows/research-ideation.v2.json",
+    "runtimeIds": ["mastra-v0"]
+  }
+}
