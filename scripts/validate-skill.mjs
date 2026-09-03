@@ -11,6 +11,16 @@ const protocolReferenceFile = join(
   "references",
   "protocol.md"
 );
+const matchingReferenceFile = join(
+  skillDirectory,
+  "references",
+  "matching.md"
+);
+const extensionsReferenceFile = join(
+  skillDirectory,
+  "references",
+  "extensions.md"
+);
 
 function fail(message) {
   process.stderr.write(`${message}\n`);
@@ -23,6 +33,12 @@ if (!existsSync(agentMetadataFile)) {
 }
 if (!existsSync(protocolReferenceFile)) {
   fail("skills/summer/references/protocol.md is missing");
+}
+if (!existsSync(matchingReferenceFile)) {
+  fail("skills/summer/references/matching.md is missing");
+}
+if (!existsSync(extensionsReferenceFile)) {
+  fail("skills/summer/references/extensions.md is missing");
 }
 
 const content = readFileSync(skillFile, "utf8");

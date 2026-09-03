@@ -35,6 +35,7 @@ interface FixtureComponentDefinition {
   readonly effect: ComponentEffect;
   readonly supportsFanout?: boolean;
   readonly capabilities: readonly string[];
+  readonly permissions?: readonly string[];
 }
 
 const FIXTURE_COMPONENTS: readonly FixtureComponentDefinition[] = [
@@ -72,14 +73,16 @@ const FIXTURE_COMPONENTS: readonly FixtureComponentDefinition[] = [
     name: "run-backtest",
     kind: "tool",
     effect: "write-idempotent",
-    capabilities: ["fixture.factor.run-backtest"]
+    capabilities: ["fixture.factor.run-backtest"],
+    permissions: ["artifact.backtest.write"]
   },
   {
     namespace: "factor",
     name: "strategy-experiment",
     kind: "nested-workflow",
     effect: "write-idempotent",
-    capabilities: ["fixture.factor.strategy-experiment"]
+    capabilities: ["fixture.factor.strategy-experiment"],
+    permissions: ["campaign.experiment.execute"]
   },
   {
     namespace: "factor",
@@ -220,6 +223,7 @@ function componentDescriptor(
     inputSchema: INPUT_SCHEMA_REF,
     outputSchema: OUTPUT_SCHEMA_REF,
     capabilities: [...definition.capabilities],
+    permissions: [...(definition.permissions ?? [])],
     effect: definition.effect,
     supportsFanout: definition.supportsFanout ?? false
   };

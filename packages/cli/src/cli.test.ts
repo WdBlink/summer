@@ -10,10 +10,13 @@ import {
 } from "./conformance-registry.js";
 import {
   FIXTURE_WORKFLOWS,
+  checkRepositoryExtension,
   compileFixtureWorkflows,
-  compileWorkflowFile
+  compileWorkflowFile,
+  matchRepositoryCatalog
 } from "./commands.js";
 import { SUMMER_PROJECT_ROOT, runCli, type CliIo } from "./cli.js";
+import { compileRepositoryCatalog } from "./repository-catalog.js";
 
 interface CapturedIo {
   readonly io: CliIo;
@@ -92,6 +95,19 @@ describe("fixture conformance registry", () => {
       expect(fixture.registryDigest).toMatch(/^[a-f0-9]{64}$/);
       expect(fixture.compiledDigest).toMatch(/^[a-f0-9]{64}$/);
     }
+  });
+
+  it("compiles a complete catalog for every registered fixture component", () => {
+    const catalog = compileRepositoryCatalog(SUMMER_PROJECT_ROOT);
+
+    expect(catalog.componentCoverage).toBe("complete");
+    expect(catalog.workflows).toHaveLength(3);
+    expect(catalog.components).toHaveLength(20);
+    expect(catalog.runtimes.map(({ runtimeId }) => runtimeId)).toEqual([
+      "mastra-v0",
+      "summer-core-v0"
+    ]);
+    expect(catalog.catalogDigest).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it("emits a fully compiled workflow, not an execution binding", () => {
@@ -219,6 +235,211 @@ describe("runCli", () => {
       ok: false,
       command: "fixtures",
       error: { code: "USAGE_ERROR" }
+    });
+  });
+
+  it("exposes catalog and natural-language matching through the CLI", async () => {
+    const catalogOutput = captureIo();
+    expect(await runCli(["catalog"], catalogOutput.io)).toBe(0);
+    expect(JSON.parse(catalogOutput.stdout[0]!)).toMatchObject({
+      ok: true,
+      command: "catalog",
+      catalog: { componentCoverage: "complete" }
+    });
+
+    const matchOutput = captureIo();
+    expect(
+      await runCli(
+        ["match-intent", "生成三个经过审计的研究构思"],
+        matchOutput.io
+      )
+    ).toBe(0);
+    expect(JSON.parse(matchOutput.stdout[0]!)).toMatchObject({
+      ok: true,
+      command: "match-intent",
+      result: {
+        workflows: {
+          status: "matched",
+          selected: {
+            workflowId: "research-ideation",
+            dispatchable: false
+          }
+        }
+      }
+    });
+  });
+
+  it("matches a Chinese iterative-research request to the factor campaign", async () => {
+    await withTemporaryFile(
+      {
+        schemaVersion: "summer.match-request/v1",
+        intent: "请持续进行量化因子发现和策略迭代调优",
+        target: "workflow",
+        profile: "iterative-campaign"
+      },
+      (file) => {
+        const result = matchRepositoryCatalog(SUMMER_PROJECT_ROOT, file);
+        expect(result.result.workflows).toMatchObject({
+          status: "matched",
+          selected: {
+            workflowId: "factor-discovery-tuning",
+            dispatchable: false,
+            dispatchBlockers: expect.arrayContaining(["entry-status:fixture"])
+          }
+        });
+        expect(result.result.components.status).toBe("not-requested");
+      }
+    );
+  });
+
+  it("reports ambiguity instead of guessing between equally scored factor flows", async () => {
+    await withTemporaryFile(
+      {
+        schemaVersion: "summer.match-request/v1",
+        intent: "因子",
+        target: "workflow"
+      },
+      (file) => {
+        const result = matchRepositoryCatalog(SUMMER_PROJECT_ROOT, file);
+        expect(result.result.workflows.status).toBe("ambiguous");
+        expect(
+          result.result.workflows.candidates.map(({ workflowId }) => workflowId)
+        ).toEqual([
+          "factor-discovery-tuning",
+          "factor-strategy-experiment"
+        ]);
+      }
+    );
+  });
+
+  it("validates a protocol-complete new component proposal", async () => {
+    const catalog = compileRepositoryCatalog(SUMMER_PROJECT_ROOT);
+    const proposal = {
+      schemaVersion: "summer.extension-proposal/v1",
+      proposalId: "report-exporter-proposal",
+      kind: "component",
+      rationale: "The current catalog has no report exporter.",
+      requestedCapabilities: ["report.export"],
+      reuseAssessment: {
+        catalogDigest: catalog.catalogDigest,
+        reviewedWorkflowIds: ["research-ideation"],
+        conclusion: "add-component",
+        justification: "The reviewed workflow aggregates ideas but cannot export a report."
+      },
+      verification: {
+        contractCases: ["valid report input produces a typed output"],
+        failureCases: ["invalid path fails closed"],
+        conformanceFixtures: ["fixtures/extensions/report-exporter.v1.json"],
+        idempotencyCases: ["same idempotency key writes one report"]
+      },
+      schemas: [],
+      component: {
+        schemaVersion: "summer.component-descriptor/v1",
+        ref: { namespace: "report", name: "export", version: "1.0.0" },
+        kind: "tool",
+        inputSchema: {
+          namespace: "summer-fixture",
+          name: "component-input",
+          version: "1.0.0"
+        },
+        outputSchema: {
+          namespace: "summer-fixture",
+          name: "component-output",
+          version: "1.0.0"
+        },
+        capabilities: ["report.export"],
+        permissions: ["filesystem.report.write"],
+        effect: "write-idempotent",
+        supportsFanout: false
+      },
+      catalogEntry: {
+        schemaVersion: "summer.component-catalog-entry/v1",
+        component: { namespace: "report", name: "export", version: "1.0.0" },
+        title: "Export report",
+        summary: "Export a typed report artifact.",
+        status: "candidate",
+        keywords: ["export", "report", "导出报告"],
+        domains: ["report"],
+        runtimeIds: ["mastra-v0"]
+      },
+      implementation: {
+        packagePath: "packages/report-exporter",
+        registryModule: "packages/report-exporter/src/registry.ts",
+        runtimeId: "mastra-v0"
+      },
+      controls: {
+        humanAuthorization: "none",
+        retryPolicy: "idempotent-only"
+      }
+    };
+
+    await withTemporaryFile(proposal, (file) => {
+      const result = checkRepositoryExtension(SUMMER_PROJECT_ROOT, file);
+      expect(result.ok).toBe(true);
+      expect(result.result.issues).toEqual([]);
+    });
+  });
+
+  it("compiles and runtime-checks a workflow extension made only from registered components", async () => {
+    const catalog = compileRepositoryCatalog(SUMMER_PROJECT_ROOT);
+    const base = loadFixtureSource("research-ideation.v1.json") as {
+      readonly profile: unknown;
+      readonly entryNodeId: string;
+      readonly nodes: unknown;
+      readonly edges: unknown;
+      readonly metadata?: unknown;
+    };
+    const workflow = {
+      ...base,
+      schemaVersion: "summer.workflow/v1",
+      workflowId: "research-ideation-custom",
+      revision: 1
+    };
+    const proposal = {
+      schemaVersion: "summer.extension-proposal/v1",
+      proposalId: "research-ideation-custom-proposal",
+      kind: "workflow",
+      rationale: "Compose registered ResearchStudio components under a new workflow identity.",
+      requestedCapabilities: ["workflow.research.custom-ideation"],
+      reuseAssessment: {
+        catalogDigest: catalog.catalogDigest,
+        reviewedWorkflowIds: ["research-ideation"],
+        conclusion: "add-workflow",
+        justification: "The topology is reusable but the intended contract needs an independent identity."
+      },
+      verification: {
+        contractCases: ["terminal contract is reachable"],
+        failureCases: ["invalid branch fails compilation"],
+        conformanceFixtures: ["fixtures/workflows/research-ideation-custom.v1.json"]
+      },
+      workflow,
+      catalogEntry: {
+        schemaVersion: "summer.workflow-catalog-entry/v1",
+        workflowId: "research-ideation-custom",
+        revision: 1,
+        profile: "bounded-flow",
+        title: "Custom research ideation",
+        summary: "A candidate workflow composed only from registered ResearchStudio components.",
+        sourcePath: "workflows/research-ideation-custom.v1.json",
+        status: "candidate",
+        capabilities: ["workflow.research.custom-ideation"],
+        selectors: {
+          phrases: ["custom research ideation"],
+          keywords: ["custom", "research", "ideation"]
+        },
+        runtimeIds: ["mastra-v0"]
+      },
+      implementation: {
+        sourcePath: "workflows/research-ideation-custom.v1.json",
+        runtimeIds: ["mastra-v0"]
+      }
+    };
+
+    await withTemporaryFile(proposal, (file) => {
+      const result = checkRepositoryExtension(SUMMER_PROJECT_ROOT, file);
+      expect(result.ok).toBe(true);
+      expect(result.result.compiledWorkflowDigest).toMatch(/^[a-f0-9]{64}$/);
+      expect(result.result.issues).toEqual([]);
     });
   });
 });

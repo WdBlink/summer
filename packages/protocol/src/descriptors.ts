@@ -76,6 +76,7 @@ const ComponentDescriptorShape = {
   inputSchema: ExactSchemaRefSchema,
   outputSchema: ExactSchemaRefSchema,
   capabilities: z.array(CapabilitySchema).default([]),
+  permissions: z.array(CapabilitySchema).default([]),
   effect: ComponentEffectSchema,
   supportsFanout: z.boolean().default(false)
 } as const;
@@ -103,6 +104,13 @@ export const ComponentDescriptorV1Schema = z
         code: "custom",
         message: "capabilities must not contain duplicates",
         path: ["capabilities"]
+      });
+    }
+    if (new Set(descriptor.permissions).size !== descriptor.permissions.length) {
+      context.addIssue({
+        code: "custom",
+        message: "permissions must not contain duplicates",
+        path: ["permissions"]
       });
     }
   });

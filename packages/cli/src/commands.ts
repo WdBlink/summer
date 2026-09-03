@@ -1,6 +1,13 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import {
+  matchCatalog,
+  validateExtensionProposal,
+  type CompiledSummerCatalogV1,
+  type ExtensionValidationReportV1,
+  type SummerMatchResultV1
+} from "@summer/catalog";
 import { WorkflowCompileError, compileWorkflow } from "@summer/compiler";
 import {
   parseWorkflowSpecV1,
@@ -12,21 +19,13 @@ import {
   FIXTURE_CONFORMANCE_REGISTRY_ID,
   createFixtureConformanceRegistry
 } from "./conformance-registry.js";
+import { FIXTURE_WORKFLOWS } from "./fixtures.js";
+import {
+  compileRepositoryCatalog,
+  repositoryRuntimeValidators
+} from "./repository-catalog.js";
 
-export const FIXTURE_WORKFLOWS = [
-  {
-    fileName: "research-ideation.v1.json",
-    workflowId: "research-ideation"
-  },
-  {
-    fileName: "factor-strategy-experiment.v1.json",
-    workflowId: "factor-strategy-experiment"
-  },
-  {
-    fileName: "factor-discovery-tuning.v1.json",
-    workflowId: "factor-discovery-tuning"
-  }
-] as const;
+export { FIXTURE_WORKFLOWS } from "./fixtures.js";
 
 export interface WorkflowValidationResult {
   readonly ok: true;
@@ -78,6 +77,32 @@ export interface FixtureCompilationResult {
   readonly fixtures: readonly FixtureCompilationSummary[];
 }
 
+export interface CatalogInspectionResult {
+  readonly ok: true;
+  readonly command: "catalog";
+  readonly catalog: CompiledSummerCatalogV1;
+}
+
+export interface CatalogMatchCommandResult {
+  readonly ok: true;
+  readonly command: "match";
+  readonly file: string;
+  readonly result: SummerMatchResultV1;
+}
+
+export interface CatalogIntentMatchCommandResult {
+  readonly ok: true;
+  readonly command: "match-intent";
+  readonly result: SummerMatchResultV1;
+}
+
+export interface ExtensionCheckCommandResult {
+  readonly ok: boolean;
+  readonly command: "extension-check";
+  readonly file: string;
+  readonly result: ExtensionValidationReportV1;
+}
+
 export class SummerCliOperationError extends Error {
   readonly code: string;
   readonly details?: unknown;
@@ -124,6 +149,32 @@ export function readWorkflowFile(filePath: string): {
       "INVALID_WORKFLOW",
       `Workflow file '${absolutePath}' does not match summer.workflow/v1`,
       validationErrorDetails(error)
+    );
+  }
+}
+
+export function readJsonFile(filePath: string): {
+  readonly absolutePath: string;
+  readonly value: unknown;
+} {
+  const absolutePath = resolve(filePath);
+  let source: string;
+  try {
+    source = readFileSync(absolutePath, "utf8");
+  } catch (error) {
+    throw new SummerCliOperationError(
+      "FILE_READ_FAILED",
+      `Could not read JSON file '${absolutePath}'`,
+      nodeErrorDetails(error)
+    );
+  }
+  try {
+    return { absolutePath, value: JSON.parse(source) as unknown };
+  } catch (error) {
+    throw new SummerCliOperationError(
+      "INVALID_JSON",
+      `File '${absolutePath}' is not valid JSON`,
+      nodeErrorDetails(error)
     );
   }
 }
@@ -222,6 +273,84 @@ export function compileFixtureWorkflows(projectRoot: string): FixtureCompilation
     },
     fixtureCount: fixtures.length,
     fixtures
+  };
+}
+
+export function inspectRepositoryCatalog(
+  projectRoot: string
+): CatalogInspectionResult {
+  return {
+    ok: true,
+    command: "catalog",
+    catalog: compileRepositoryCatalog(projectRoot)
+  };
+}
+
+export function matchRepositoryCatalog(
+  projectRoot: string,
+  filePath: string
+): CatalogMatchCommandResult {
+  const { absolutePath, value } = readJsonFile(filePath);
+  const catalog = compileRepositoryCatalog(projectRoot);
+  try {
+    return {
+      ok: true,
+      command: "match",
+      file: absolutePath,
+      result: matchCatalog(value, catalog)
+    };
+  } catch (error) {
+    throw new SummerCliOperationError(
+      "INVALID_MATCH_REQUEST",
+      `Match request '${absolutePath}' does not match summer.match-request/v1`,
+      validationErrorDetails(error)
+    );
+  }
+}
+
+export function matchRepositoryIntent(
+  projectRoot: string,
+  intent: string
+): CatalogIntentMatchCommandResult {
+  const catalog = compileRepositoryCatalog(projectRoot);
+  try {
+    return {
+      ok: true,
+      command: "match-intent",
+      result: matchCatalog(
+        {
+          schemaVersion: "summer.match-request/v1",
+          intent,
+          target: "all"
+        },
+        catalog
+      )
+    };
+  } catch (error) {
+    throw new SummerCliOperationError(
+      "INVALID_MATCH_REQUEST",
+      "Natural-language match intent is invalid",
+      validationErrorDetails(error)
+    );
+  }
+}
+
+export function checkRepositoryExtension(
+  projectRoot: string,
+  filePath: string
+): ExtensionCheckCommandResult {
+  const { absolutePath, value } = readJsonFile(filePath);
+  const catalog = compileRepositoryCatalog(projectRoot);
+  const result = validateExtensionProposal(value, {
+    catalog,
+    registry: createFixtureConformanceRegistry(),
+    runtimeWorkflowValidators: repositoryRuntimeValidators()
+  });
+  return {
+    ok: result.valid,
+    command: "extension-check",
+    file: absolutePath,
+    result
   };
 }
 

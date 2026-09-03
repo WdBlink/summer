@@ -10,9 +10,19 @@
 - Real Mastra execution for linear bounded flows and one structured `fork → join: all`
 - JSON CLI, repository-owned `$summer` Skill source and metadata, and three model-free conformance fixtures
 
+## Milestone 0.5 — controlled capability discovery (implemented)
+
+- Complete catalog coverage for the active fixture Component Registry
+- Versioned workflow, component, runtime, match-request, and extension-proposal contracts
+- Explainable intent matching with hard capability/profile/runtime filters and ambiguity handling
+- Explicit dispatchability and blocker reporting; fixture presence never implies executability
+- Extension validation for reuse evidence, schemas, permissions, effects, retry/authorization policy, runtime conformance, and test plans
+- `$summer` routing and secondary-development guidance with progressive matching/extension references
+
 ## Milestone 1 — executable bounded Flow
 
 - Production component packs and provider-neutral agent executors
+- Promote catalog entries from `fixture` to `available` only with real executor bindings
 - NodeReceipt emission around every adapter execution
 - Artifact store contract and content-addressed evidence
 - Typed human-gate suspend/resume

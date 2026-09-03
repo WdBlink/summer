@@ -47,6 +47,7 @@ function component(
       inputSchema: schemaRef,
       outputSchema: schemaRef,
       capabilities: [],
+      permissions: [],
       effect: options.effect ?? "none",
       supportsFanout: options.supportsFanout ?? false
     },

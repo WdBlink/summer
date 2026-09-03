@@ -47,6 +47,7 @@ const componentDescriptor: ComponentDescriptorV1 = {
   inputSchema: inputRef,
   outputSchema: outputRef,
   capabilities: ["test/echo"],
+  permissions: [],
   effect: "none",
   supportsFanout: false
 };

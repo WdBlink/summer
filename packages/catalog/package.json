@@ -1,11 +1,8 @@
 {
-  "name": "@summer/cli",
+  "name": "@summer/catalog",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "bin": {
-    "summer": "./dist/cli.js"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -19,17 +16,14 @@
     "build": "tsc -b",
     "clean": "tsc -b --clean",
     "typecheck": "tsc -b --pretty false",
-    "test": "vitest run src"
+    "test": "vitest run --root ../.. packages/catalog/src/catalog.test.ts"
   },
   "dependencies": {
-    "@summer/catalog": "workspace:*",
     "@summer/compiler": "workspace:*",
     "@summer/components": "workspace:*",
-    "@summer/protocol": "workspace:*",
-    "@summer/runtime-mastra": "workspace:*"
+    "@summer/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "22.20.1",
     "typescript": "7.0.2",
     "vitest": "4.1.11"
   }

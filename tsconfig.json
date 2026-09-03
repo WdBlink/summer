@@ -4,6 +4,7 @@
     { "path": "packages/protocol" },
     { "path": "packages/components" },
     { "path": "packages/compiler" },
+    { "path": "packages/catalog" },
     { "path": "packages/core" },
     { "path": "packages/runtime-mastra" },
     { "path": "packages/cli" }

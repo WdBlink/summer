@@ -19,6 +19,7 @@
       "@summer/protocol": ["./packages/protocol/src/index.ts"],
       "@summer/compiler": ["./packages/compiler/src/index.ts"],
       "@summer/components": ["./packages/components/src/index.ts"],
+      "@summer/catalog": ["./packages/catalog/src/index.ts"],
       "@summer/core": ["./packages/core/src/index.ts"],
       "@summer/runtime-mastra": ["./packages/runtime-mastra/src/index.ts"],
       "@summer/cli": ["./packages/cli/src/index.ts"]

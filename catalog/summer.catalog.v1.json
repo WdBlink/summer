@@ -1,0 +1,312 @@
+{
+  "schemaVersion": "summer.catalog/v1",
+  "catalogId": "summer-fixture-catalog",
+  "componentCoverage": "complete",
+  "workflows": [
+    {
+      "schemaVersion": "summer.workflow-catalog-entry/v1",
+      "workflowId": "research-ideation",
+      "revision": 1,
+      "profile": "bounded-flow",
+      "title": "Research ideation",
+      "summary": "Generate three research ideas, validate each branch, aggregate distinct candidates, and produce a terminal contract.",
+      "sourcePath": "fixtures/workflows/research-ideation.v1.json",
+      "status": "fixture",
+      "capabilities": [
+        "workflow.research.ideation",
+        "workflow.research.parallel-review"
+      ],
+      "selectors": {
+        "phrases": ["research ideation", "研究构思", "生成研究想法"],
+        "keywords": ["idea", "ideation", "research", "研究", "构思", "选题"],
+        "domains": ["科研", "论文", "research"]
+      },
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.workflow-catalog-entry/v1",
+      "workflowId": "factor-strategy-experiment",
+      "revision": 1,
+      "profile": "bounded-flow",
+      "title": "Factor strategy experiment",
+      "summary": "Freeze one offline factor experiment, generate and validate a candidate, run an idempotent backtest, and evaluate evidence.",
+      "sourcePath": "fixtures/workflows/factor-strategy-experiment.v1.json",
+      "status": "fixture",
+      "capabilities": [
+        "workflow.quant.backtest",
+        "workflow.quant.factor-experiment"
+      ],
+      "selectors": {
+        "phrases": ["factor backtest", "因子回测", "单次策略实验"],
+        "keywords": ["backtest", "factor", "strategy", "回测", "因子", "策略", "实验"],
+        "domains": ["量化", "投资", "quant"]
+      },
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.workflow-catalog-entry/v1",
+      "workflowId": "factor-discovery-tuning",
+      "revision": 1,
+      "profile": "iterative-campaign",
+      "title": "Factor discovery and tuning",
+      "summary": "Compose bounded factor experiments into a budgeted iterative campaign with Frame Check and closed decision routes.",
+      "sourcePath": "fixtures/workflows/factor-discovery-tuning.v1.json",
+      "status": "fixture",
+      "capabilities": [
+        "workflow.quant.factor-discovery",
+        "workflow.quant.iterative-optimization"
+      ],
+      "selectors": {
+        "phrases": ["factor discovery", "因子发现", "因子调优", "策略迭代优化"],
+        "keywords": ["campaign", "discovery", "factor", "iteration", "optimization", "发现", "因子", "循环", "调优", "迭代"],
+        "domains": ["量化", "投资", "quant"]
+      },
+      "runtimeIds": ["summer-core-v0"]
+    }
+  ],
+  "components": [
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "factor", "name": "evaluate-evidence", "version": "1.0.0"},
+      "title": "Evaluate factor evidence",
+      "summary": "Classify committed backtest evidence without changing campaign state.",
+      "status": "fixture",
+      "keywords": ["evidence", "evaluation", "因子证据", "评估"],
+      "domains": ["量化", "quant"],
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "factor", "name": "freeze-experiment", "version": "1.0.0"},
+      "title": "Freeze experiment identity",
+      "summary": "Freeze baseline, evaluator, dataset, horizon, cost model, and experiment identity before execution.",
+      "status": "fixture",
+      "keywords": ["freeze", "identity", "冻结实验", "实验身份"],
+      "domains": ["量化", "实验"],
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "factor", "name": "generate-candidate", "version": "1.0.0"},
+      "title": "Generate factor candidate",
+      "summary": "Propose one bounded factor or strategy candidate for an experiment.",
+      "status": "fixture",
+      "keywords": ["candidate", "factor", "生成因子", "候选策略"],
+      "domains": ["量化", "实验"],
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "factor", "name": "iteration-policy", "version": "1.0.0"},
+      "title": "Factor iteration policy",
+      "summary": "Propose the next generation plan from committed campaign evidence.",
+      "status": "fixture",
+      "keywords": ["iteration", "generation plan", "迭代策略", "下一轮实验"],
+      "domains": ["量化", "campaign"],
+      "runtimeIds": ["summer-core-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "factor", "name": "run-backtest", "version": "1.0.0"},
+      "title": "Run factor backtest",
+      "summary": "Execute one idempotent offline strategy backtest.",
+      "status": "fixture",
+      "keywords": ["backtest", "回测", "策略测试", "因子测试"],
+      "domains": ["量化", "投资"],
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "factor", "name": "strategy-experiment", "version": "1.0.0"},
+      "title": "Factor strategy child workflow",
+      "summary": "Invoke the bounded factor-strategy-experiment child workflow from a campaign.",
+      "status": "fixture",
+      "keywords": ["child workflow", "strategy experiment", "子工作流", "策略实验"],
+      "domains": ["量化", "campaign"],
+      "runtimeIds": ["summer-core-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "factor", "name": "validate-candidate", "version": "1.0.0"},
+      "title": "Validate factor candidate",
+      "summary": "Apply deterministic feasibility checks to a proposed factor candidate.",
+      "status": "fixture",
+      "keywords": ["validate", "candidate", "校验因子", "可行性"],
+      "domains": ["量化", "实验"],
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "researchstudio", "name": "aggregate", "version": "1.0.0"},
+      "title": "Aggregate research ideas",
+      "summary": "Merge validated branches and remove duplicate research candidates.",
+      "status": "fixture",
+      "keywords": ["aggregate", "deduplicate", "聚合", "去重"],
+      "domains": ["科研", "research"],
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "researchstudio", "name": "audit", "version": "1.0.0"},
+      "title": "Audit research idea",
+      "summary": "Audit evidence and claims for one research idea branch.",
+      "status": "fixture",
+      "keywords": ["audit", "evidence", "审计", "证据"],
+      "domains": ["科研", "research"],
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "researchstudio", "name": "coherence", "version": "1.0.0"},
+      "title": "Check idea coherence",
+      "summary": "Check whether a research idea is internally coherent.",
+      "status": "fixture",
+      "keywords": ["coherence", "logic", "一致性", "逻辑"],
+      "domains": ["科研", "research"],
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "researchstudio", "name": "collision", "version": "1.0.0"},
+      "title": "Check idea collision",
+      "summary": "Check novelty collisions and overlap with existing research directions.",
+      "status": "fixture",
+      "keywords": ["collision", "novelty", "查重", "创新性"],
+      "domains": ["科研", "research"],
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "researchstudio", "name": "freeze-brief", "version": "1.0.0"},
+      "title": "Freeze research brief",
+      "summary": "Freeze the research brief and fan it out to independent idea branches.",
+      "status": "fixture",
+      "keywords": ["brief", "fanout", "冻结需求", "并行分支"],
+      "domains": ["科研", "research"],
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "researchstudio", "name": "generate", "version": "1.0.0"},
+      "title": "Generate research idea",
+      "summary": "Generate one bounded research idea from a frozen brief.",
+      "status": "fixture",
+      "keywords": ["generate idea", "ideation", "生成构思", "研究想法"],
+      "domains": ["科研", "research"],
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "researchstudio", "name": "implementability", "version": "1.0.0"},
+      "title": "Check implementability",
+      "summary": "Check whether a research idea can be implemented with available resources.",
+      "status": "fixture",
+      "keywords": ["implementability", "feasibility", "可实现性", "工程可行性"],
+      "domains": ["科研", "research"],
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "summer", "name": "activation-policy", "version": "1.0.0"},
+      "title": "Campaign activation policy",
+      "summary": "Validate and activate a frozen iterative campaign.",
+      "status": "fixture",
+      "keywords": ["activation", "campaign start", "启动策略", "激活"],
+      "domains": ["Summer", "campaign"],
+      "runtimeIds": ["summer-core-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "summer", "name": "budget-policy", "version": "1.0.0"},
+      "title": "Campaign budget policy",
+      "summary": "Evaluate frozen experiment, retry, and total-node budgets.",
+      "status": "fixture",
+      "keywords": ["budget", "limit", "预算", "资源限制"],
+      "domains": ["Summer", "campaign"],
+      "runtimeIds": ["summer-core-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "summer", "name": "decision-policy", "version": "1.0.0"},
+      "title": "Campaign decision policy",
+      "summary": "Commit one declared decision edge from a valid Frame Assessment.",
+      "status": "fixture",
+      "keywords": ["decision", "route", "决策策略", "状态迁移"],
+      "domains": ["Summer", "campaign"],
+      "runtimeIds": ["summer-core-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "summer", "name": "frame-check-policy", "version": "1.0.0"},
+      "title": "Campaign Frame Check",
+      "summary": "Assess whether the goal, evaluator, evidence, and abstraction frame remain valid.",
+      "status": "fixture",
+      "keywords": ["frame check", "recompile", "框架检查", "重编译"],
+      "domains": ["Summer", "campaign"],
+      "runtimeIds": ["summer-core-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "summer", "name": "terminal-receipt", "version": "1.0.0"},
+      "title": "Terminal receipt contract",
+      "summary": "Validate the terminal result contract for bounded flows and campaigns.",
+      "status": "fixture",
+      "keywords": ["terminal receipt", "result", "终态凭证", "最终结果"],
+      "domains": ["Summer"],
+      "runtimeIds": ["mastra-v0", "summer-core-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "summer", "name": "wait-state", "version": "1.0.0"},
+      "title": "Campaign wait state",
+      "summary": "Represent a wakeable waiting state without transferring campaign authority to a scheduler.",
+      "status": "fixture",
+      "keywords": ["wait", "wake", "等待", "唤醒"],
+      "domains": ["Summer", "campaign"],
+      "runtimeIds": ["summer-core-v0"]
+    }
+  ],
+  "runtimes": [
+    {
+      "schemaVersion": "summer.runtime-catalog-entry/v1",
+      "runtimeId": "mastra-v0",
+      "title": "Mastra bounded-flow adapter v0",
+      "summary": "Translate the supported bounded-flow subset into executable Mastra workflows when exact executors are bound.",
+      "status": "fixture",
+      "supportedProfiles": ["bounded-flow"],
+      "supportedComponentKinds": ["agent", "tool", "validator", "nested-workflow"],
+      "supportedEffects": ["none", "read", "write-idempotent"],
+      "capabilities": [
+        "runtime.bounded-flow.linear",
+        "runtime.bounded-flow.single-fork-join"
+      ],
+      "limitations": [
+        "Rejects iterative campaigns, join:any, failure routes, human suspension, and non-idempotent writes.",
+        "The fixture registry has no executor bindings and the adapter is not connected to the campaign ledger."
+      ],
+      "persistence": "none",
+      "executorBindings": false
+    },
+    {
+      "schemaVersion": "summer.runtime-catalog-entry/v1",
+      "runtimeId": "summer-core-v0",
+      "title": "Summer campaign core v0",
+      "summary": "Validate iterative-campaign state transitions with an append-only in-memory authority ledger.",
+      "status": "fixture",
+      "supportedProfiles": ["iterative-campaign"],
+      "supportedComponentKinds": ["tool", "validator", "nested-workflow", "policy"],
+      "supportedEffects": ["none", "read", "write-idempotent"],
+      "capabilities": [
+        "runtime.campaign.decision-policy",
+        "runtime.campaign.frame-check",
+        "runtime.campaign.in-memory-ledger"
+      ],
+      "limitations": [
+        "No durable storage, lease fencing, scheduler, or campaign worker is implemented.",
+        "Campaign policy descriptors in the fixture registry have no executor bindings."
+      ],
+      "persistence": "in-memory",
+      "executorBindings": false
+    }
+  ]
+}

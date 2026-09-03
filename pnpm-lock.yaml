@@ -21,7 +21,7 @@ importers:
         specifier: 4.1.11
         version: 4.1.11(@types/node@22.20.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(tsx@4.23.13))
 
-  packages/cli:
+  packages/catalog:
     dependencies:
       '@summer/compiler':
         specifier: workspace:*
@@ -32,6 +32,31 @@ importers:
       '@summer/protocol':
         specifier: workspace:*
         version: link:../protocol
+    devDependencies:
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: 4.1.11
+        version: 4.1.11(@types/node@22.20.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(tsx@4.23.13))
+
+  packages/cli:
+    dependencies:
+      '@summer/catalog':
+        specifier: workspace:*
+        version: link:../catalog
+      '@summer/compiler':
+        specifier: workspace:*
+        version: link:../compiler
+      '@summer/components':
+        specifier: workspace:*
+        version: link:../components
+      '@summer/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@summer/runtime-mastra':
+        specifier: workspace:*
+        version: link:../runtime-mastra
     devDependencies:
       '@types/node':
         specifier: 22.20.1

@@ -34,6 +34,7 @@ const component: ComponentDescriptorV1 = {
   inputSchema: schemaRef,
   outputSchema: schemaRef,
   capabilities: ["research/read"],
+  permissions: [],
   effect: "read",
   supportsFanout: false
 };
