@@ -12,20 +12,28 @@ import {
   registerResearchIdeationComponents,
   type ResearchIdeationRegistryOptions
 } from "@summer/research-ideation";
-import { planMastraWorkflow } from "@summer/runtime-mastra";
+import {
+  planMastraWorkflow,
+  registerDynamicTaskComponent,
+  type DynamicTaskRuntimeOptions
+} from "@summer/runtime-mastra";
 
 import { createFixtureConformanceRegistry } from "./conformance-registry.js";
 
 export const REPOSITORY_CATALOG_PATH = "catalog/summer.catalog.v1.json";
 export const REPOSITORY_REGISTRY_ID = "summer.repository-registry/v1" as const;
 
+export interface RepositoryRegistryOptions extends ResearchIdeationRegistryOptions {
+  readonly dynamicTask?: DynamicTaskRuntimeOptions;
+}
+
 export function createRepositoryRegistry(
-  options: ResearchIdeationRegistryOptions = {}
+  options: RepositoryRegistryOptions = {}
 ) {
-  return registerResearchIdeationComponents(
+  return registerDynamicTaskComponent(registerResearchIdeationComponents(
     createFixtureConformanceRegistry(),
     options
-  );
+  ), options.dynamicTask);
 }
 
 export function compileRepositoryCatalog(

@@ -6,11 +6,11 @@
     {
       "schemaVersion": "summer.workflow-catalog-entry/v1",
       "workflowId": "research-ideation",
-      "revision": 2,
+      "revision": 3,
       "profile": "bounded-flow",
       "title": "Research ideation with Idea Spark",
       "summary": "Generate one literature-grounded, reviewer-defensible and implementable research idea through the canonical Idea Spark workflow.",
-      "sourcePath": "workflows/research-ideation.v2.json",
+      "sourcePath": "workflows/research-ideation.v3.json",
       "status": "available",
       "capabilities": [
         "workflow.research.ideation",
@@ -25,51 +25,42 @@
     },
     {
       "schemaVersion": "summer.workflow-catalog-entry/v1",
-      "workflowId": "factor-strategy-experiment",
+      "workflowId": "dynamic-agent-workflow",
       "revision": 1,
       "profile": "bounded-flow",
-      "title": "Factor strategy experiment",
-      "summary": "Freeze one offline factor experiment, generate and validate a candidate, run an idempotent backtest, and evaluate evidence.",
-      "sourcePath": "fixtures/workflows/factor-strategy-experiment.v1.json",
-      "status": "fixture",
+      "title": "Dynamic multi-model task execution",
+      "summary": "Use the strongest visible Codex host model to author a fresh Mastra dynamic workflow, then dispatch bounded Codex and MiniMax workers.",
+      "sourcePath": "workflows/dynamic-agent-workflow.v1.json",
+      "status": "available",
       "capabilities": [
-        "workflow.quant.backtest",
-        "workflow.quant.factor-experiment"
+        "workflow.dynamic.plan",
+        "workflow.dynamic.execute",
+        "agent.multi-model.dispatch"
       ],
       "selectors": {
-        "phrases": ["factor backtest", "因子回测", "单次策略实验"],
-        "keywords": ["backtest", "factor", "strategy", "回测", "因子", "策略", "实验"],
-        "domains": ["量化", "投资", "quant"]
+        "phrases": ["dynamic workflow", "动态工作流", "现场编排", "多模型协作"],
+        "keywords": ["agent", "codex", "dynamic", "minimax", "workflow", "动态", "编排", "智能体"],
+        "domains": ["通用", "agent", "workflow"]
       },
       "runtimeIds": ["mastra-v0"]
-    },
-    {
-      "schemaVersion": "summer.workflow-catalog-entry/v1",
-      "workflowId": "factor-discovery-tuning",
-      "revision": 1,
-      "profile": "iterative-campaign",
-      "title": "Factor discovery and tuning",
-      "summary": "Compose bounded factor experiments into a budgeted iterative campaign with Frame Check and closed decision routes.",
-      "sourcePath": "fixtures/workflows/factor-discovery-tuning.v1.json",
-      "status": "fixture",
-      "capabilities": [
-        "workflow.quant.factor-discovery",
-        "workflow.quant.iterative-optimization"
-      ],
-      "selectors": {
-        "phrases": ["factor discovery", "因子发现", "因子调优", "策略迭代优化"],
-        "keywords": ["campaign", "discovery", "factor", "iteration", "optimization", "发现", "因子", "循环", "调优", "迭代"],
-        "domains": ["量化", "投资", "quant"]
-      },
-      "runtimeIds": ["summer-core-v0"]
     }
   ],
   "components": [
     {
       "schemaVersion": "summer.component-catalog-entry/v1",
-      "component": {"namespace": "researchstudio", "name": "idea-spark-prepare", "version": "1.0.0"},
+      "component": {"namespace": "summer", "name": "dynamic-agent-workflow", "version": "1.0.0"},
+      "title": "Plan and run a dynamic multi-model workflow",
+      "summary": "Discover the strongest host Codex planner, validate its Mastra dynamic graph, and execute bounded Codex or MiniMax workers.",
+      "status": "available",
+      "keywords": ["dynamic workflow", "host strongest model", "Codex", "MiniMax", "动态工作流", "多模型"],
+      "domains": ["通用", "agent", "workflow"],
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-prepare", "version": "2.0.0"},
       "title": "Prepare Idea Spark request",
-      "summary": "Validate and digest-bind a research question and its isolated Idea Spark run directory.",
+      "summary": "Validate a scoped typed execution grant, then digest-bind the scientific request and isolated Idea Spark run directory.",
       "status": "available",
       "keywords": ["idea spark request", "freeze research question", "研究构思输入"],
       "domains": ["科研", "research"],
@@ -77,9 +68,9 @@
     },
     {
       "schemaVersion": "summer.component-catalog-entry/v1",
-      "component": {"namespace": "researchstudio", "name": "idea-spark-runner", "version": "1.0.0"},
-      "title": "Run Idea Spark workflow",
-      "summary": "Drive the canonical Idea Spark navigator through literature, bottleneck, generation, gauntlet, and packaging stages in isolated Codex contexts.",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "title": "Run one explicit Idea Spark stage",
+      "summary": "Advance exactly one literature, bottleneck, candidate, coherence/collision, gauntlet, or packaging boundary with heartbeat telemetry.",
       "status": "available",
       "keywords": ["idea spark", "research ideation execution", "研究构思工作流"],
       "domains": ["科研", "research"],
@@ -87,7 +78,37 @@
     },
     {
       "schemaVersion": "summer.component-catalog-entry/v1",
-      "component": {"namespace": "researchstudio", "name": "idea-spark-verify", "version": "1.0.0"},
+      "component": {"namespace": "researchstudio", "name": "idea-spark-provider-gate", "version": "2.0.0"},
+      "title": "Verify retrieval provider status",
+      "summary": "Derive provider status from immutable retrieval evidence and fail closed against the grant's literature or collision policy.",
+      "status": "available",
+      "keywords": ["provider status", "retrieval gate", "检索状态", "来源门禁"],
+      "domains": ["科研", "research"],
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-retry-decision", "version": "2.0.0"},
+      "title": "Decide bounded Idea Spark retry",
+      "summary": "Map the authoritative Idea Spark navigator to a typed candidate retry, bottleneck re-diagnosis, packaging, failure, or terminal route.",
+      "status": "available",
+      "keywords": ["retry decision", "information gain", "重试决策", "信息增益"],
+      "domains": ["科研", "research"],
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-transition", "version": "2.0.0"},
+      "title": "Apply Idea Spark retry transition",
+      "summary": "Apply exactly one archived candidate retry, bottleneck re-diagnosis, or terminal failure transition emitted by Idea Spark.",
+      "status": "available",
+      "keywords": ["retry transition", "archive attempt", "重试迁移", "归档尝试"],
+      "domains": ["科研", "research"],
+      "runtimeIds": ["mastra-v0"]
+    },
+    {
+      "schemaVersion": "summer.component-catalog-entry/v1",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-verify", "version": "2.0.0"},
       "title": "Verify Idea Spark terminal",
       "summary": "Verify the terminal navigator state and digest every required Idea Spark output artifact.",
       "status": "available",
@@ -149,7 +170,7 @@
       "schemaVersion": "summer.component-catalog-entry/v1",
       "component": {"namespace": "factor", "name": "strategy-experiment", "version": "1.0.0"},
       "title": "Factor strategy child workflow",
-      "summary": "Invoke the bounded factor-strategy-experiment child workflow from a campaign.",
+      "summary": "Invoke a bounded factor experiment child component from a campaign.",
       "status": "fixture",
       "keywords": ["child workflow", "strategy experiment", "子工作流", "策略实验"],
       "domains": ["量化", "campaign"],
@@ -308,11 +329,12 @@
       "supportedEffects": ["none", "read", "write-idempotent"],
       "capabilities": [
         "runtime.bounded-flow.linear",
-        "runtime.bounded-flow.single-fork-join"
+        "runtime.bounded-flow.single-fork-join",
+        "runtime.dynamic-workflow.builder"
       ],
       "limitations": [
         "Rejects iterative campaigns, join:any, failure routes, human suspension, and non-idempotent writes.",
-        "The adapter is not connected to the campaign ledger; durable workflow persistence remains outside v0."
+        "Run-local receipts and worker heartbeats are append-only, but the adapter has no durable Mastra checkpoint and is not connected to the campaign ledger."
       ],
       "persistence": "none",
       "executorBindings": true

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { isAbsolute, resolve } from "node:path";
 
 import {
   matchCatalog,
@@ -16,8 +16,15 @@ import {
   type NodeReceiptV1,
   type WorkflowSpecV1
 } from "@summer/protocol";
-import type { ResearchIdeationRegistryOptions } from "@summer/research-ideation";
 import {
+  IdeaSparkExecutionGrantV1Schema,
+  IdeaSparkRequestManifestV2Schema,
+  ideaSparkScientificRequestDigest,
+  type IdeaSparkExecutionGrantV1,
+  type IdeaSparkRequestManifestV2
+} from "@summer/research-ideation";
+import {
+  AppendOnlyReceiptJournal,
   SummerMastraEnvelopeV1Schema,
   createMastraWorkflow,
   type MastraAdapterPlanV1,
@@ -33,7 +40,8 @@ import {
   REPOSITORY_REGISTRY_ID,
   compileRepositoryCatalog,
   createRepositoryRegistry,
-  repositoryRuntimeValidators
+  repositoryRuntimeValidators,
+  type RepositoryRegistryOptions
 } from "./repository-catalog.js";
 
 export { FIXTURE_WORKFLOWS } from "./fixtures.js";
@@ -66,14 +74,21 @@ export interface WorkflowCompilationResult {
 
 export interface WorkflowRunResult {
   readonly ok: true;
-  readonly command: "run";
+  readonly command: "run" | "resume";
   readonly workflowId: string;
   readonly revision: number;
-  readonly inputFile: string;
+  readonly inputFile?: string;
+  readonly requestManifest?: string;
+  readonly grantFile?: string;
   readonly runId: string;
   readonly compiledWorkflowDigest: string;
   readonly registryDigest: string;
   readonly plan: MastraAdapterPlanV1;
+  readonly receiptJournal: {
+    readonly path: string;
+    readonly receiptCount: number;
+    readonly receiptIds: readonly string[];
+  };
   readonly result: SummerMastraEnvelopeV1;
 }
 
@@ -255,9 +270,134 @@ export async function runRepositoryWorkflow(
   projectRoot: string,
   workflowId: string,
   inputFilePath: string,
-  registryOptions: ResearchIdeationRegistryOptions = {}
+  registryOptions: RepositoryRegistryOptions = {}
 ): Promise<WorkflowRunResult> {
   const { absolutePath, value } = readJsonFile(inputFilePath);
+  return executeRepositoryWorkflow(
+    projectRoot,
+    workflowId,
+    value,
+    { command: "run", inputFile: absolutePath },
+    registryOptions
+  );
+}
+
+export async function resumeRepositoryWorkflow(
+  projectRoot: string,
+  workflowId: string,
+  runDir: string,
+  grantFilePath: string,
+  registryOptions: RepositoryRegistryOptions = {}
+): Promise<WorkflowRunResult> {
+  if (workflowId !== "research-ideation") {
+    throw new SummerCliOperationError(
+      "WORKFLOW_RESUME_UNSUPPORTED",
+      `Workflow '${workflowId}' does not expose a typed resume protocol`
+    );
+  }
+  const resolvedRunDir = resolve(runDir);
+  const loadedManifest = readJsonFile(
+    resolve(resolvedRunDir, ".summer", "request.json")
+  );
+  const loadedGrant = readJsonFile(grantFilePath);
+  let manifest: IdeaSparkRequestManifestV2;
+  let grant: IdeaSparkExecutionGrantV1;
+  try {
+    manifest = IdeaSparkRequestManifestV2Schema.parse(loadedManifest.value);
+    grant = IdeaSparkExecutionGrantV1Schema.parse(loadedGrant.value);
+  } catch (error) {
+    throw new SummerCliOperationError(
+      "INVALID_RESUME_INPUT",
+      "Resume requires a valid immutable request manifest and a fresh typed execution grant",
+      validationErrorDetails(error)
+    );
+  }
+  if (resolve(manifest.runDir) !== resolvedRunDir) {
+    throw new SummerCliOperationError(
+      "RESUME_RUN_DIRECTORY_MISMATCH",
+      `Resume target '${resolvedRunDir}' does not match manifest runDir '${manifest.runDir}'`
+    );
+  }
+  const actualDigest = ideaSparkScientificRequestDigest(manifest);
+  if (actualDigest !== manifest.requestDigest) {
+    throw new SummerCliOperationError(
+      "RESUME_REQUEST_MANIFEST_TAMPERED",
+      "The immutable scientific request manifest does not match its recorded digest",
+      { expected: manifest.requestDigest, actual: actualDigest }
+    );
+  }
+  assertResumeGrantFresh(resolvedRunDir, grant.grantId);
+  const value = {
+    schemaVersion: "summer.research-ideation-request/v2",
+    query: manifest.query,
+    workspaceDir: manifest.workspaceDir,
+    runDir: manifest.runDir,
+    executionGrant: grant
+  };
+  return executeRepositoryWorkflow(
+    projectRoot,
+    workflowId,
+    value,
+    {
+      command: "resume",
+      requestManifest: loadedManifest.absolutePath,
+      grantFile: loadedGrant.absolutePath
+    },
+    registryOptions
+  );
+}
+
+function assertResumeGrantFresh(runDir: string, grantId: string): void {
+  const invocationsDir = resolve(runDir, ".summer", "invocations");
+  if (!existsSync(invocationsDir)) return;
+  for (const invocation of readdirSync(invocationsDir, { withFileTypes: true })) {
+    if (!invocation.isDirectory()) continue;
+    const path = resolve(invocationsDir, invocation.name, "grant.json");
+    if (!existsSync(path)) continue;
+    let value: unknown;
+    try {
+      value = JSON.parse(readFileSync(path, "utf8")) as unknown;
+    } catch (error) {
+      throw new SummerCliOperationError(
+        "INVALID_PRIOR_INVOCATION_GRANT",
+        `Could not validate prior invocation grant '${path}'`,
+        nodeErrorDetails(error)
+      );
+    }
+    const priorGrantId =
+      typeof value === "object" &&
+      value !== null &&
+      "grant" in value &&
+      typeof value.grant === "object" &&
+      value.grant !== null &&
+      "grantId" in value.grant &&
+      typeof value.grant.grantId === "string"
+        ? value.grant.grantId
+        : undefined;
+    if (priorGrantId === grantId) {
+      throw new SummerCliOperationError(
+        "RESUME_GRANT_REUSED",
+        `Execution grant '${grantId}' was already used by invocation '${invocation.name}'`
+      );
+    }
+  }
+}
+
+type WorkflowExecutionOrigin =
+  | { readonly command: "run"; readonly inputFile: string }
+  | {
+      readonly command: "resume";
+      readonly requestManifest: string;
+      readonly grantFile: string;
+    };
+
+async function executeRepositoryWorkflow(
+  projectRoot: string,
+  workflowId: string,
+  value: unknown,
+  origin: WorkflowExecutionOrigin,
+  registryOptions: RepositoryRegistryOptions
+): Promise<WorkflowRunResult> {
   const catalog = compileRepositoryCatalog(projectRoot);
   const entry = catalog.workflows.find(
     (candidate) => candidate.workflowId === workflowId
@@ -307,10 +447,29 @@ export async function runRepositoryWorkflow(
     );
   }
 
+  const entryNode = compiled.nodes.find(({ id }) => id === compiled.entryNodeId);
+  if (entryNode === undefined) {
+    throw new SummerCliOperationError("WORKFLOW_ENTRY_MISSING", `Workflow '${workflowId}' has no entry node`);
+  }
+  let runtimeInput: unknown;
+  try {
+    runtimeInput = registry.resolveSchemaBinding(entryNode.resolvedComponent.inputSchema).parse(value);
+  } catch (error) {
+    throw new SummerCliOperationError(
+      "INVALID_WORKFLOW_INPUT",
+      `Input does not match workflow '${workflowId}@${entry.revision}'`,
+      validationErrorDetails(error)
+    );
+  }
+  const runDir = workflowRunDirectory(runtimeInput);
+  const receiptJournal = new AppendOnlyReceiptJournal(
+    resolve(runDir, ".summer", "receipts.jsonl")
+  );
   const observedReceipts: NodeReceiptV1[] = [];
   const binding = createMastraWorkflow(compiled, registry, {
     onReceipt: (receipt) => {
       observedReceipts.push(receipt);
+      receiptJournal.append(receipt);
     }
   });
   const runId = `run-${randomUUID()}`;
@@ -318,18 +477,22 @@ export async function runRepositoryWorkflow(
   const execution = await run.start({
     inputData: {
       schemaVersion: "summer.mastra-run-input/v1",
-      input: value
+      input: runtimeInput
     }
   });
   if (execution.status !== "success") {
+    const failedReceipt = [...observedReceipts]
+      .reverse()
+      .find(({ status }) => status === "failed");
     throw new SummerCliOperationError(
       "WORKFLOW_EXECUTION_FAILED",
       `Workflow '${workflowId}@${entry.revision}' did not complete successfully`,
       execution.status === "failed"
         ? {
             status: execution.status,
-            error: nodeErrorDetails(execution.error),
-            receipts: observedReceipts
+            error: failedReceipt?.error ?? nodeErrorDetails(execution.error),
+            receipts: observedReceipts,
+            receiptJournal: receiptJournal.snapshot()
           }
         : {status: execution.status}
     );
@@ -337,16 +500,32 @@ export async function runRepositoryWorkflow(
 
   return {
     ok: true,
-    command: "run",
+    ...origin,
     workflowId: compiled.workflowId,
     revision: compiled.revision,
-    inputFile: absolutePath,
     runId,
     compiledWorkflowDigest: compiled.compiledDigest,
     registryDigest: compiled.registryDigest,
     plan: binding.plan,
+    receiptJournal: receiptJournal.snapshot(),
     result: SummerMastraEnvelopeV1Schema.parse(execution.result)
   };
+}
+
+function workflowRunDirectory(input: unknown): string {
+  if (
+    typeof input !== "object" ||
+    input === null ||
+    !("runDir" in input) ||
+    typeof input.runDir !== "string" ||
+    !isAbsolute(input.runDir)
+  ) {
+    throw new SummerCliOperationError(
+      "WORKFLOW_RUN_DIRECTORY_MISSING",
+      "Executable workflow input must contain an absolute runDir for durable receipts"
+    );
+  }
+  return resolve(input.runDir);
 }
 
 export function compileFixtureWorkflows(projectRoot: string): FixtureCompilationResult {

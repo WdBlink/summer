@@ -35,4 +35,4 @@ The `$summer` Skill translates user intent, invokes these contracts, explains th
 
 ## Current limit
 
-`research-ideation@2` is the first available, dispatchable bounded Flow. Its exact component schemas, executors, Mastra runtime conformance, receipt emission, and terminal artifact checks are registered together. The factor workflows and campaign runtime remain fixtures; durable campaign infrastructure is still not implemented.
+`research-ideation@3` and `dynamic-agent-workflow@1` are available, dispatchable bounded Flows. The former exposes Idea Spark's exact stages and retries; the latter validates and registers an invocation-specific Mastra Dynamic Workflow planned by the highest-priority visible model according to the host Codex catalog. The campaign runtime remains a fixture; durable Mastra checkpoints and durable campaign infrastructure are still not implemented.

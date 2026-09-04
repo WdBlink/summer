@@ -2,7 +2,7 @@
 
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { ResearchIdeationRegistryOptions } from "@summer/research-ideation";
+import type { RepositoryRegistryOptions } from "./repository-catalog.js";
 
 import {
   SummerCliOperationError,
@@ -12,6 +12,7 @@ import {
   inspectRepositoryCatalog,
   matchRepositoryIntent,
   matchRepositoryCatalog,
+  resumeRepositoryWorkflow,
   runRepositoryWorkflow,
   validateWorkflowFile
 } from "./commands.js";
@@ -36,6 +37,7 @@ const USAGE = [
   "summer fixtures",
   "summer catalog",
   "summer run <workflow-id> <input.json>",
+  "summer resume <workflow-id> <run-dir> <grant.json>",
   "summer match-intent <intent>",
   "summer match <request.json>",
   "summer extension-check <proposal.json>"
@@ -45,7 +47,7 @@ export async function runCli(
   argv: readonly string[],
   io: CliIo = DEFAULT_IO,
   projectRoot: string = SUMMER_PROJECT_ROOT,
-  registryOptions: ResearchIdeationRegistryOptions = {}
+  registryOptions: RepositoryRegistryOptions = {}
 ): Promise<number> {
   const [command, ...args] = argv;
 
@@ -87,6 +89,22 @@ export async function runCli(
             projectRoot,
             args[0]!,
             args[1]!,
+            registryOptions
+          )
+        )
+      );
+      return 0;
+    }
+
+    if (command === "resume") {
+      requireArgumentCount(command, args, 3);
+      io.stdout(
+        stringify(
+          await resumeRepositoryWorkflow(
+            projectRoot,
+            args[0]!,
+            args[1]!,
+            args[2]!,
             registryOptions
           )
         )

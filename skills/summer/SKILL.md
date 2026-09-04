@@ -16,6 +16,8 @@ SUMMER_REPO=/absolute/path/to/summer
 pnpm --silent --dir "$SUMMER_REPO" summer catalog
 pnpm --silent --dir "$SUMMER_REPO" summer match-intent "the user's request"
 pnpm --silent --dir "$SUMMER_REPO" summer run research-ideation /absolute/path/to/request.json
+pnpm --silent --dir "$SUMMER_REPO" summer run dynamic-agent-workflow /absolute/path/to/request.json
+pnpm --silent --dir "$SUMMER_REPO" summer resume research-ideation /absolute/path/to/run-dir /absolute/path/to/fresh-grant.json
 pnpm --silent --dir "$SUMMER_REPO" summer match /absolute/path/to/match-request.json
 pnpm --silent --dir "$SUMMER_REPO" summer extension-check /absolute/path/to/proposal.json
 pnpm --silent --dir "$SUMMER_REPO" summer validate /absolute/path/to/workflow.json
@@ -42,7 +44,11 @@ A valid proposal is admissible design input, not implemented code and not a regi
 
 ## Runtime boundary
 
-`research-ideation@2` is executable through `summer run`. Its request must conform to `summer.research-ideation-request/v1`, and resumption uses the identical query and run directory. Iterative production campaigns are still unsupported: if a user asks to start, resume, schedule, or persist one, report that boundary. Do not simulate campaign state with Skill-owned state, repeated prompts, cron, or direct Mastra internals.
+`research-ideation@3` is executable through `summer run`. Its request must conform to `summer.research-ideation-request/v2` and include an active, exact-scope `summer.execution-grant/v1` with typed `networkDisclosure`. Read [references/research-ideation.md](references/research-ideation.md) before constructing or running this request. Create a local grant only after the user has explicitly asked to execute the Flow; never derive authority or provider relaxation from the research query. Resume only with `summer resume research-ideation <run-dir> <fresh-grant.json>`: it loads the immutable query and paths from `.summer/request.json`, verifies its digest, creates a fresh invocation identity, and refuses a modified request. Never make an “authorized” copy of the query or run directory.
+
+`dynamic-agent-workflow@1` is the general fallback when the user explicitly wants live task-specific orchestration or no specialized workflow matches. Read [references/dynamic-agent-workflow.md](references/dynamic-agent-workflow.md) before constructing its typed request. On every invocation Summer selects the strongest visible Codex host model at its maximum supported effort, validates the Mastra Dynamic Workflow it generates, and dispatches only granted Codex or MiniMax workers. Do not replace this with a Skill-authored prompt chain or claim that MiniMax workers can edit files: the current MiniMax executor has no tools.
+
+The Flow owns its explicit stage, provider-gate, retry-decision, and transition nodes. Do not manually drive `idea-spark/next`, emulate a retry, treat degraded provider retrieval as success, or rewrite `.summer/receipts.jsonl`. Iterative production campaigns are still unsupported: if a user asks to start, resume, schedule, or persist one, report that boundary. Do not simulate campaign state with Skill-owned state, repeated prompts, cron, or direct Mastra internals.
 
 ## Operating rules
 

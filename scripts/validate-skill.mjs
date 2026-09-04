@@ -21,6 +21,11 @@ const extensionsReferenceFile = join(
   "references",
   "extensions.md"
 );
+const dynamicWorkflowReferenceFile = join(
+  skillDirectory,
+  "references",
+  "dynamic-agent-workflow.md"
+);
 
 function fail(message) {
   process.stderr.write(`${message}\n`);
@@ -39,6 +44,9 @@ if (!existsSync(matchingReferenceFile)) {
 }
 if (!existsSync(extensionsReferenceFile)) {
   fail("skills/summer/references/extensions.md is missing");
+}
+if (!existsSync(dynamicWorkflowReferenceFile)) {
+  fail("skills/summer/references/dynamic-agent-workflow.md is missing");
 }
 
 const content = readFileSync(skillFile, "utf8");

@@ -25,3 +25,22 @@ export {
   type MastraAdapterIssue,
   type MastraAdapterIssueCode
 } from "./errors.js";
+export {
+  AppendOnlyReceiptJournal,
+  type ReceiptJournalSnapshot
+} from "./receipt-journal.js";
+export {
+  DYNAMIC_TASK_COMPONENT_REF,
+  DYNAMIC_TASK_REQUEST_SCHEMA_REF,
+  DYNAMIC_TASK_RESULT_SCHEMA_REF,
+  DYNAMIC_TASK_VERSION,
+  DynamicTaskExecutionError,
+  DynamicTaskExecutionGrantV1Schema,
+  DynamicTaskRequestV1Schema,
+  DynamicTaskResultV1Schema,
+  registerDynamicTaskComponent,
+  runDynamicTask,
+  type DynamicTaskCommandResult,
+  type DynamicTaskCommandRunner,
+  type DynamicTaskRuntimeOptions
+} from "./dynamic-task.js";

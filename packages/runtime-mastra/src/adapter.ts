@@ -7,6 +7,7 @@ import {
 } from "@mastra/core/workflows";
 import {
   JsonValueSchema,
+  JsonObjectSchema,
   NodeReceiptV1Schema,
   ArtifactReferenceV1Schema,
   canonicalJson,
@@ -833,7 +834,8 @@ function createNodeReceipt(input: {
           error: {
             code: errorCode(input.error),
             message: errorMessage(input.error),
-            retryable: input.attempt < input.node.maxAttempts
+            retryable: input.attempt < input.node.maxAttempts,
+            ...errorDetails(input.error)
           }
         }
       : {}),
@@ -988,6 +990,18 @@ function errorCode(error: unknown): string {
     if (/^[A-Za-z0-9]/.test(value)) return value.slice(0, 160);
   }
   return "COMPONENT_EXECUTION_FAILED";
+}
+
+function errorDetails(
+  error: unknown
+): { readonly details: Record<string, JsonValue> } | Record<string, never> {
+  if (typeof error !== "object" || error === null || !("details" in error)) {
+    return {};
+  }
+  const parsed = JsonObjectSchema.safeParse(
+    (error as { readonly details?: unknown }).details
+  );
+  return parsed.success ? { details: parsed.data } : {};
 }
 
 function unsupportedShape(message: string): never {

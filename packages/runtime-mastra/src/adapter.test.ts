@@ -19,6 +19,7 @@ import {
 import {
   MastraAdapterError,
   MASTRA_V0_SUPPORT_MATRIX,
+  AppendOnlyReceiptJournal,
   SummerMastraEnvelopeV1Schema,
   createMastraWorkflow,
   planMastraWorkflow
@@ -313,6 +314,38 @@ describe("Mastra v0 adapter", () => {
     ]);
   });
 
+  it("persists receipts append-only across journal instances", async () => {
+    const directory = mkdtempSync(resolve(tmpdir(), "summer-receipts-"));
+    try {
+      const only = component("only", (input) => input);
+      const compiled = makeCompiled([{id: "only", component: only}], []);
+      const receipts: NodeReceiptV1[] = [];
+      const {workflow} = createMastraWorkflow(compiled, makeRegistry([only]), {
+        onReceipt: (receipt) => {
+          receipts.push(receipt);
+        }
+      });
+      const execution = await (await workflow.createRun({runId: "journal-run"})).start({
+        inputData: {schemaVersion: "summer.mastra-run-input/v1", input: "value"}
+      });
+      expect(execution.status).toBe("success");
+      const receipt = receipts[0];
+      if (receipt === undefined) throw new Error("missing test receipt");
+
+      const path = resolve(directory, "receipts.jsonl");
+      const first = new AppendOnlyReceiptJournal(path);
+      expect(first.append(receipt)).toBe(true);
+      const resumed = new AppendOnlyReceiptJournal(path);
+      expect(resumed.append(receipt)).toBe(false);
+      expect(resumed.snapshot()).toMatchObject({receiptCount: 1});
+      expect(() =>
+        resumed.append({...receipt, completedAt: "2099-01-01T00:00:00.000Z"})
+      ).toThrow(/conflict/);
+    } finally {
+      rmSync(directory, {recursive: true, force: true});
+    }
+  });
+
   it("executes one structured fork/join with deterministic join input", async () => {
     const fork = component("fork", (input) => (input as number) + 1, {
       supportsFanout: true
@@ -486,3 +519,6 @@ describe("Mastra v0 adapter", () => {
     );
   });
 });
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";

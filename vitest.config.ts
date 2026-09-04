@@ -11,6 +11,9 @@ export default defineConfig({
       "@summer/compiler": fromRoot("./packages/compiler/src/index.ts"),
       "@summer/core": fromRoot("./packages/core/src/index.ts"),
       "@summer/runtime-mastra": fromRoot("./packages/runtime-mastra/src/index.ts"),
+      "@summer/research-ideation": fromRoot(
+        "./packages/research-ideation/src/index.ts"
+      ),
       "@summer/cli": fromRoot("./packages/cli/src/index.ts")
     }
   },
