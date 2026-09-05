@@ -12,13 +12,17 @@ Use Node.js `>=22.13.0` and pnpm `11.2.2`. From the repository root:
 
 ```bash
 pnpm install
-pnpm validate
-pnpm --silent summer catalog
+pnpm --silent demo
 ```
+
+The model-free demo runs, verifies, publishes locally and reuses a note workflow
+in a fresh temporary directory. It prints the evidence location and leaves your
+project catalog untouched. See [the saved evidence guide](workflow-products.md#runnable-lifecycle-demo).
 
 `catalog` compiles the repository catalog against the active registry and workflow sources. To select a workflow without running it:
 
 ```bash
+pnpm --silent summer catalog
 pnpm --silent summer match-intent "generate a literature-grounded research idea"
 pnpm --silent summer match-intent "use a dynamic multi-model workflow for this repository task"
 ```
@@ -63,5 +67,6 @@ ADR 0001's first-fixture list is historical decision context, not the current fi
 | `pnpm test` | Run the Vitest suite once |
 | `pnpm skill:validate` | Validate the repository-owned Summer Skill |
 | `pnpm validate` | Run type checking, tests, and Skill validation |
+| `pnpm --silent demo` | Run the isolated, model-free workflow lifecycle example and its assertions |
 
 For workflow, catalog, matching, execution, resume, and extension commands, see the [CLI reference](cli.md).
