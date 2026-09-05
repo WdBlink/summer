@@ -17,7 +17,7 @@
 [![Mastra native][mastra-badge]][architecture-url]
 
 <a href="#quick-start">Quick start</a> &middot;
-<a href="#install">Install</a> &middot;
+<a href="#use-it-from-codex">Use with Codex</a> &middot;
 <a href="docs/workflow-products.md">User guide</a> &middot;
 <a href="CHANGELOG.md">What's new</a>
 
@@ -27,49 +27,48 @@
 
 ## Good work should not start from scratch
 
-You get an agent task right. Next week, you need the same process with different inputs — without rebuilding the prompt, rediscovering the tools, or guessing whether the result is complete.
+If you repeat research, documentation or other multi-step agent tasks, getting a good result once is only half the job. Next week, you need the same process with different inputs — without rebuilding the prompt or guessing whether the result is complete.
 
-Summer helps you keep the process. Start with a task-specific plan, run it within declared limits, check the deliverables, then turn a successful run into a reviewed, versioned workflow. Use the bundled **Codex Skill** to choose what to run, or use the **CLI** directly.
+Summer helps you keep the process. Use the bundled **Codex Skill** or **CLI** to plan a new task, check its deliverables, and turn an accepted run into a reviewed, versioned workflow. Next time, reuse that version with new inputs.
 
 ## What you get
 
-- **A workflow you can keep.** Turn an accepted run into a parameterized draft, test it on new inputs and failure cases, then explicitly publish a reusable version.
-- **A fresh plan when you need one.** Let the host-preferred Codex model plan the task at its highest supported effort, using the tools Summer actually has.
-- **The right worker for each step.** Combine granted Codex and MiniMax models. Codex can work in the host environment; MiniMax workers are tool-free.
-- **Deliverables with a definition of done.** Check required files, JSON fields and text instead of treating a successful process exit as task completion.
-- **A way back into interrupted work.** Resume suspended runs from persistent checkpoints, inspect receipts, and roll back a published default without changing in-flight versions.
-- **An entry point for your next workflow.** Discover existing capabilities first; design extensions around registered tools and contracts when something is missing.
+- **Keep what worked.** Review an accepted run, test it with new inputs and failures, then publish a reusable version.
+- **Plan what is new.** Ask the host-preferred Codex model to plan at its highest supported effort, using available tools.
+- **Choose your workers.** Combine authorized Codex and MiniMax models; Codex works on the host, while MiniMax workers are tool-free.
+- **Check the actual deliverables.** Require files, JSON fields and text, not just a successful process exit.
+- **Resume and roll back.** Resume suspended work, inspect execution records and change the default version without changing in-flight runs.
+- **Extend from what exists.** Discover workflows first; design missing capabilities around registered tools and contracts.
 
 ## Quick start
 
-After [installation](#install), try these distinct operations in Codex. These are sample requests, not transcripts of completed runs:
-
-| Ask Summer | What you get |
-| --- | --- |
-| `$summer Find a workflow for literature-grounded research ideation.` | Matching candidates and missing prerequisites; nothing runs yet. |
-| `$summer Use a dynamic workflow to write this project's documentation.` | A task-specific plan and execution after inputs, acceptance and grants are set. |
-| `$summer Turn this accepted run into a reusable workflow.` | A reviewed draft, validation cases and an explicit publication step. |
-| `$summer Design a workflow for a task the catalog does not cover.` | An extension proposal grounded in existing components and their limits. |
-
-Prefer the terminal? Inspect capabilities without invoking a model:
+Run the complete **write → check → publish → reuse** example. Requires **Node.js ≥22.13.0**, **pnpm 11.2.2** and repository access while Summer remains private. No model credentials or Codex installation needed:
 
 ```bash
-pnpm --silent summer catalog
-pnpm --silent summer match-intent "literature-grounded research ideation"
+git clone https://github.com/WdBlink/summer.git && cd summer
+pnpm install --frozen-lockfile
+pnpm --silent demo
 ```
 
-Want a complete first run with **no model credentials**? The [write-a-note example](docs/workflow-products.md#first-deterministic-product) writes an artifact, checks it, and persists its run state.
+Verified output from the demo (the generated directory line is omitted):
+
+```text
+Summer demo | real Mastra execution, no model calls
+[1/5] run-draft  accepted: note.md = "A verified note"
+[2/5] promote    draft: write-note@1 (explicit candidate)
+[3/5] verify     passed: new input, invalid input, exhausted budget
+[4/5] publish    write-note@1 (temporary local library)
+[5/5] reuse      accepted: note.md = "Next week's note"
+Checks passed. Evidence saved in the directory above.
+```
+
+Open `source/note.md` and `reuse/note.md` under the printed directory to compare the results. The demo creates fresh, scoped grants and a **temporary local product library**; it does not modify your project files or publish to GitHub. Each rerun gets a new directory.
+
+This is a predefined, parameterized graph running through the real CLI handlers and Mastra, **not a live-planning or model-quality demonstration**. Review the [executable example](examples/workflow-lifecycle.mjs) and [saved evidence guide](docs/workflow-products.md#runnable-lifecycle-demo). CI runs the same command.
 
 ## Install
 
-Requires **Node.js ≥22.13.0** and **pnpm 11.2.2**. Install from source; Summer is not published to npm. Access to this repository is required while it remains private.
-
-```bash
-git clone https://github.com/WdBlink/summer.git
-cd summer
-pnpm install --frozen-lockfile
-pnpm --silent summer catalog
-```
+The Quick start commands install Summer from source; it is not published to npm. For model-backed tasks, also configure your local Codex CLI and provider access. MiniMax workers need a configured Claude CLI; [research ideation](docs/workflow-products.md#native-research-ideation-v4) also needs Idea Spark and Python.
 
 To register the bundled Skill in Codex, run from the repository root. The guard leaves any existing Summer installation untouched:
 
@@ -79,7 +78,18 @@ test ! -e "$HOME/.codex/skills/summer" && test ! -L "$HOME/.codex/skills/summer"
   ln -s "$PWD/skills/summer" "$HOME/.codex/skills/summer"
 ```
 
-Start a new Codex task and invoke `$summer`. Existing installations should be reviewed before replacement. Model workflows additionally need their configured local CLIs and provider access; [research ideation](docs/workflow-products.md#native-research-ideation-v4) also needs Idea Spark and Python.
+Start a new Codex task and invoke `$summer`. Existing installations should be reviewed before replacement.
+
+## Use it from Codex
+
+These are sample requests, not transcripts. Summer confirms inputs, acceptance checks and execution permissions before dispatch:
+
+| Ask Summer | What happens |
+| --- | --- |
+| `$summer Find a workflow for literature-grounded research ideation.` | Discover matching workflows and missing prerequisites; nothing runs yet. |
+| `$summer Use a dynamic workflow to write this project's documentation.` | Plan a new task, execute its steps and check the deliverables. |
+| `$summer Turn this accepted run into a reusable workflow.` | Review a parameterized candidate, verify it, then explicitly publish. |
+| `$summer Design a workflow for a task the catalog does not cover.` | Propose an extension using existing components and contracts. |
 
 ## Choose your starting point
 

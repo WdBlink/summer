@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "summer": "tsc -b packages/cli --pretty false && node packages/cli/dist/cli.js",
+    "demo": "tsc -b packages/cli --pretty false && node examples/workflow-lifecycle.mjs",
     "validate": "pnpm typecheck && pnpm test && pnpm skill:validate",
     "skill:validate": "node scripts/validate-skill.mjs"
   },

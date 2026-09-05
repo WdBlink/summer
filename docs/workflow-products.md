@@ -6,6 +6,10 @@ they are not silently translated or upgraded. See [ADR 0003](adr/0003-mastra-fir
 
 ## First deterministic product
 
+For an immediate run with generated paths and fresh grants, use `pnpm --silent demo`
+from the repository root after installation. It runs the [complete lifecycle below](#runnable-lifecycle-demo).
+To author a product yourself, follow the explicit JSON example here.
+
 Save this as `note.product.json`. This is an executable example, not a prepublished capability.
 
 ```json
@@ -62,6 +66,43 @@ pnpm --silent summer status /absolute/workspace/runs/note-1
 registered-tool and control-flow checks supplement JSON Schema validation.
 Parameters are nonempty strings in this first product revision; use registered
 domain components when richer semantics are required.
+
+## Runnable lifecycle demo
+
+```bash
+pnpm --silent demo
+```
+
+The [example script](../examples/workflow-lifecycle.mjs) executes real CLI handlers
+in separate Node processes, with the library root set to a fresh OS temporary
+directory. It reuses the registered write/read tools and Mastra persistence;
+there is no mock runner, model call or change to the production runtime.
+Its graph and parameterization are predefined, so it does not demonstrate live
+planning, automatic generalization or research quality.
+
+The five stages run an accepted draft, promote the explicit candidate, verify
+different input plus missing-input and exhausted-budget cases, publish `write-note@1`
+to the temporary library, and run that exact version with a third input. Assertions
+check statuses, file contents, verification categories and persisted tool receipts.
+The failure case deliberately exhausts one call before the read step; its expected
+runtime diagnostic is retained in the saved CLI response rather than printed as
+an unexpected demo error.
+
+Inspect these paths under the printed `Evidence directory`:
+
+| Path | Evidence |
+| --- | --- |
+| `note.product.json` | Explicit graph, parameters and artifact acceptance |
+| `source/note.md` / `reuse/note.md` | Different text produced by the same process |
+| `products/drafts/write-note@1.json.verification.json` | All three verification cases |
+| `products/published/write-note@1.json` | Exact local release and compact provenance |
+| `reuse/run/.summer-v2/` | Frozen manifest, Mastra database, acceptance result and append-only events |
+| `cli-*.json` | Arguments, exit status, stdout and stderr for each CLI invocation |
+
+The temporary outputs remain for inspection; your operating system may eventually
+remove them. Each rerun uses a new directory. Nothing is published into the real
+repository's product catalog or sent to a provider. For a lasting product, use the
+normal [promotion and publication commands](#promotion-and-publication).
 
 ## Registered primitives and acceptance
 
