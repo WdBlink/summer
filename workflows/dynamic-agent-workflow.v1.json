@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "summer.workflow/v1",
+  "workflowId": "dynamic-agent-workflow",
+  "revision": 1,
+  "profile": {
+    "kind": "bounded-flow",
+    "terminalNodeIds": ["plan-and-execute"]
+  },
+  "entryNodeId": "plan-and-execute",
+  "nodes": [
+    {
+      "id": "plan-and-execute",
+      "component": {
+        "namespace": "summer",
+        "name": "dynamic-agent-workflow",
+        "version": "1.0.0"
+      },
+      "dispatch": "route",
+      "timeoutMs": 3600000,
+      "maxAttempts": 1,
+      "idempotencyKey": "dynamic-agent-workflow-v1"
+    }
+  ],
+  "edges": [],
+  "metadata": {
+    "title": "Dynamic multi-model task execution",
+    "description": "Select the strongest visible Codex host model to author a fresh Mastra dynamic workflow, then execute it with bounded Codex and MiniMax workers."
+  }
+}

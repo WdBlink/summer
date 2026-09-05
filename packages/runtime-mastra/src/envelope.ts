@@ -1,4 +1,9 @@
-import { JsonValueSchema, type JsonValue } from "@summer/protocol";
+import {
+  JsonValueSchema,
+  NodeReceiptV1Schema,
+  type JsonValue,
+  type NodeReceiptV1
+} from "@summer/protocol";
 import { z } from "zod";
 
 export const MASTRA_RUN_INPUT_SCHEMA_VERSION =
@@ -25,6 +30,7 @@ export const SummerMastraEnvelopeV1Schema = z
     initialInput: JsonValueSchema,
     current: JsonValueSchema,
     outputs: z.record(z.string(), JsonValueSchema),
+    receipts: z.array(NodeReceiptV1Schema),
     lastNodeId: z.string().trim().min(1).optional(),
     campaignId: z.string().trim().min(1).optional(),
     experimentId: z.string().trim().min(1).optional()
@@ -43,6 +49,7 @@ export function createInitialEnvelope(
     initialInput: input.input,
     current: input.input,
     outputs: {},
+    receipts: [],
     ...(input.campaignId === undefined ? {} : { campaignId: input.campaignId }),
     ...(input.experimentId === undefined
       ? {}
@@ -53,13 +60,15 @@ export function createInitialEnvelope(
 export function withNodeOutput(
   envelope: SummerMastraEnvelopeV1,
   nodeId: string,
-  output: JsonValue
+  output: JsonValue,
+  receipt: NodeReceiptV1
 ): SummerMastraEnvelopeV1 {
   return SummerMastraEnvelopeV1Schema.parse({
     schemaVersion: MASTRA_ENVELOPE_SCHEMA_VERSION,
     initialInput: envelope.initialInput,
     current: output,
     outputs: { ...envelope.outputs, [nodeId]: output },
+    receipts: [...envelope.receipts, receipt],
     lastNodeId: nodeId,
     ...(envelope.campaignId === undefined
       ? {}

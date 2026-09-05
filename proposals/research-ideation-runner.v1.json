@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "summer.extension-proposal/v1",
+  "proposalId": "research-ideation-runner-v1",
+  "kind": "component",
+  "rationale": "Execute the canonical Idea Spark next-state protocol in bounded phase groups while preserving its own retry, collision, coherence, and rendering semantics.",
+  "requestedCapabilities": ["research.ideation.idea-spark.execute"],
+  "reuseAssessment": {
+    "catalogDigest": "4f45c19c8e53e486c7f218ceacb8dbe80bf4b37ffdab95e6bdf3b9cfc88b2ba2",
+    "reviewedWorkflowIds": ["research-ideation"],
+    "reviewedComponents": [
+      {"namespace": "researchstudio", "name": "generate", "version": "1.0.0"},
+      {"namespace": "researchstudio", "name": "coherence", "version": "1.0.0"},
+      {"namespace": "researchstudio", "name": "collision", "version": "1.0.0"},
+      {"namespace": "researchstudio", "name": "audit", "version": "1.0.0"},
+      {"namespace": "researchstudio", "name": "implementability", "version": "1.0.0"}
+    ],
+    "conclusion": "add-component",
+    "justification": "The fixture components neither implement Idea Spark's current single-candidate five-phase state machine nor bind executors. A nested-workflow adapter is required to retain its canonical navigator without creating a second control plane."
+  },
+  "verification": {
+    "contractCases": ["the six bounded stage groups advance a fresh run to one of Idea Spark's three terminal states"],
+    "failureCases": ["a non-advancing worker, malformed navigator output, unavailable Codex binary, or conflicting run manifest fails closed"],
+    "conformanceFixtures": ["packages/research-ideation/src/research-ideation.test.ts"],
+    "idempotencyCases": ["replaying the same digest-bound run resumes its navigator while a different request for that run directory is rejected"]
+  },
+  "schemas": [
+    {
+      "schemaVersion": "summer.schema-descriptor/v1",
+      "ref": {"namespace": "researchstudio", "name": "idea-spark-prepared", "version": "1.0.0"},
+      "jsonSchema": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "required": ["schemaVersion", "query", "workspaceDir", "runDir", "requestDigest"]}
+    },
+    {
+      "schemaVersion": "summer.schema-descriptor/v1",
+      "ref": {"namespace": "researchstudio", "name": "idea-spark-execution", "version": "1.0.0"},
+      "jsonSchema": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "required": ["schemaVersion", "request", "terminalStatus", "navigator", "stageRuns"]}
+    }
+  ],
+  "component": {
+    "schemaVersion": "summer.component-descriptor/v1",
+    "ref": {"namespace": "researchstudio", "name": "idea-spark-runner", "version": "1.0.0"},
+    "kind": "nested-workflow",
+    "inputSchema": {"namespace": "researchstudio", "name": "idea-spark-prepared", "version": "1.0.0"},
+    "outputSchema": {"namespace": "researchstudio", "name": "idea-spark-execution", "version": "1.0.0"},
+    "capabilities": ["research.ideation.idea-spark.execute"],
+    "permissions": ["filesystem.research-artifact.write", "network.research.retrieve", "process.codex.exec"],
+    "effect": "write-idempotent",
+    "supportsFanout": false
+  },
+  "catalogEntry": {
+    "schemaVersion": "summer.component-catalog-entry/v1",
+    "component": {"namespace": "researchstudio", "name": "idea-spark-runner", "version": "1.0.0"},
+    "title": "Run Idea Spark workflow",
+    "summary": "Drive the canonical Idea Spark navigator through literature, bottleneck, generation, gauntlet, and packaging stages in isolated Codex contexts.",
+    "status": "candidate",
+    "keywords": ["idea spark", "research ideation execution", "研究构思工作流"],
+    "domains": ["科研", "research"],
+    "runtimeIds": ["mastra-v0"]
+  },
+  "implementation": {
+    "packagePath": "packages/research-ideation",
+    "registryModule": "packages/research-ideation/src/registry.ts",
+    "runtimeId": "mastra-v0"
+  },
+  "controls": {"humanAuthorization": "none", "retryPolicy": "idempotent-only"}
+}

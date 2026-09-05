@@ -3,21 +3,33 @@
 ## Authority chain
 
 ```text
-Workflow source
+User intent
+  -> versioned capability catalog and match request
+  -> selected workflow/components plus dispatchability evidence
+  -> Workflow source or validated extension proposal
   -> Summer compiler
   -> CompiledWorkflowV1
   -> runtime adapter
-  -> typed receipts and events
+  -> scoped execution grant and runtime checks
+  -> append-only typed receipts and events
   -> campaign ledger
 ```
 
 The serialized source and compiled IR never contain executor functions. Component descriptors are versioned data; executor bindings live only in the runtime registry.
+
+The catalog is discoverability data, not a second registry. A catalog marked with complete component coverage must annotate every exact component in the active Registry. Matching may recommend only cataloged entries and must preserve ambiguity, capability gaps, current `catalogDigest`, and dispatch blockers. An entry becomes dispatchable only when the workflow/component, runtime, and executor bindings are all available.
+
+Component descriptors declare capabilities, permissions, effect class, input/output schemas, and fan-out support. Extension proposals additionally freeze implementation ownership, authorization/retry policy, reuse evidence, and verification cases before code is written.
 
 `SummerCore.start()` is the trusted campaign-start boundary: it recompiles the supplied manifest against the active registry and accepts only `iterative-campaign`. Callers cannot append their own `campaign-started` event. A `bounded-flow` executes through a runtime adapter and returns a child result; it is not opened as a campaign ledger.
 
 ## Profiles
 
 `bounded-flow` must be a finite DAG with an explicit entry and terminal nodes. It may fan out into independent branches. Each child run terminates with a receipt bound to its compiled workflow, component, inputs, outputs, run, node, and attempt.
+
+A privileged bounded Flow must accept authority as typed input rather than infer it from a natural-language task. A local execution grant binds workflow identity, exact filesystem scope, permissions, provider policy, and an active time window. Every privileged node revalidates the grant, and a worker that outlives expiry is aborted. The grant is a local capability envelope; it does not substitute for host authentication or operating-system isolation.
+
+Bounded-Flow node receipts are appended to a run-local immutable journal across invocations. Exact receipt replay is idempotent and a same-ID/different-content replay is a hard conflict. A receipt journal records execution evidence; it must not be presented as a runtime checkpoint or campaign ledger. Long-running child processes emit append-only heartbeats, while the runtime's node timeout remains authoritative for cancellation.
 
 Any node with more than one incoming edge must declare its join semantics. Use `join: all` when every branch must finish and `join: any` when alternative temporal/control paths can activate the node. Runtime adapters may support only a subset and must reject the rest explicitly.
 

@@ -12,12 +12,14 @@ import {
   type ComponentEffect,
   type ComponentKind,
   type JsonValue,
+  type NodeReceiptV1,
   type WorkflowEdgeV1
 } from "@summer/protocol";
 
 import {
   MastraAdapterError,
   MASTRA_V0_SUPPORT_MATRIX,
+  AppendOnlyReceiptJournal,
   SummerMastraEnvelopeV1Schema,
   createMastraWorkflow,
   planMastraWorkflow
@@ -47,6 +49,7 @@ function component(
       inputSchema: schemaRef,
       outputSchema: schemaRef,
       capabilities: [],
+      permissions: [],
       effect: options.effect ?? "none",
       supportsFanout: options.supportsFanout ?? false
     },
@@ -214,6 +217,11 @@ describe("Mastra v0 adapter", () => {
     const envelope = SummerMastraEnvelopeV1Schema.parse(result.result);
     expect(envelope.current).toBe(6);
     expect(envelope.outputs).toEqual({ first: 3, second: 6 });
+    expect(envelope.receipts).toMatchObject([
+      {nodeId: "first", attempt: 1, status: "succeeded"},
+      {nodeId: "second", attempt: 1, status: "succeeded"}
+    ]);
+    expect(envelope.receipts.every(({outputDigest}) => outputDigest !== undefined)).toBe(true);
     expect(contexts).toMatchObject([
       { nodeId: "first", attempt: 1 },
       { nodeId: "second", attempt: 1 }
@@ -267,6 +275,7 @@ describe("Mastra v0 adapter", () => {
 
   it("enforces node timeouts and aborts the component signal", async () => {
     let observedAbort = false;
+    const receipts: NodeReceiptV1[] = [];
     const slow = component(
       "slow",
       (_input, context) =>
@@ -285,7 +294,11 @@ describe("Mastra v0 adapter", () => {
       [{ id: "slow", component: slow, timeoutMs: 5 }],
       []
     );
-    const { workflow } = createMastraWorkflow(compiled, makeRegistry([slow]));
+    const { workflow } = createMastraWorkflow(compiled, makeRegistry([slow]), {
+      onReceipt: (receipt) => {
+        receipts.push(receipt);
+      }
+    });
     const result = await (await workflow.createRun()).start({
       inputData: { schemaVersion: "summer.mastra-run-input/v1", input: "wait" }
     });
@@ -293,6 +306,44 @@ describe("Mastra v0 adapter", () => {
     expect(observedAbort).toBe(true);
     if (result.status !== "failed") throw new Error("expected failure");
     expect(result.error).toMatchObject({ code: "MASTRA_COMPONENT_TIMEOUT" });
+    expect(receipts).toMatchObject([
+      {
+        status: "failed",
+        error: {code: "MASTRA_COMPONENT_TIMEOUT"}
+      }
+    ]);
+  });
+
+  it("persists receipts append-only across journal instances", async () => {
+    const directory = mkdtempSync(resolve(tmpdir(), "summer-receipts-"));
+    try {
+      const only = component("only", (input) => input);
+      const compiled = makeCompiled([{id: "only", component: only}], []);
+      const receipts: NodeReceiptV1[] = [];
+      const {workflow} = createMastraWorkflow(compiled, makeRegistry([only]), {
+        onReceipt: (receipt) => {
+          receipts.push(receipt);
+        }
+      });
+      const execution = await (await workflow.createRun({runId: "journal-run"})).start({
+        inputData: {schemaVersion: "summer.mastra-run-input/v1", input: "value"}
+      });
+      expect(execution.status).toBe("success");
+      const receipt = receipts[0];
+      if (receipt === undefined) throw new Error("missing test receipt");
+
+      const path = resolve(directory, "receipts.jsonl");
+      const first = new AppendOnlyReceiptJournal(path);
+      expect(first.append(receipt)).toBe(true);
+      const resumed = new AppendOnlyReceiptJournal(path);
+      expect(resumed.append(receipt)).toBe(false);
+      expect(resumed.snapshot()).toMatchObject({receiptCount: 1});
+      expect(() =>
+        resumed.append({...receipt, completedAt: "2099-01-01T00:00:00.000Z"})
+      ).toThrow(/conflict/);
+    } finally {
+      rmSync(directory, {recursive: true, force: true});
+    }
   });
 
   it("executes one structured fork/join with deterministic join input", async () => {
@@ -468,3 +519,6 @@ describe("Mastra v0 adapter", () => {
     );
   });
 });
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";

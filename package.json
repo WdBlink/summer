@@ -2,6 +2,7 @@
   "name": "summer",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "description": "Protocol-first agent workflow orchestration with pluggable runtimes.",
   "type": "module",
   "packageManager": "pnpm@11.2.2",

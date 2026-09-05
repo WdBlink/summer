@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "summer.extension-proposal/v1",
+  "proposalId": "research-ideation-prepare-v1",
+  "kind": "component",
+  "rationale": "Replace the permissive fixture entry boundary with an exact request contract that freezes the research question and filesystem scope before Idea Spark can run.",
+  "requestedCapabilities": ["research.ideation.prepare"],
+  "reuseAssessment": {
+    "catalogDigest": "4f45c19c8e53e486c7f218ceacb8dbe80bf4b37ffdab95e6bdf3b9cfc88b2ba2",
+    "reviewedWorkflowIds": ["research-ideation"],
+    "reviewedComponents": [
+      {"namespace": "researchstudio", "name": "freeze-brief", "version": "1.0.0"}
+    ],
+    "conclusion": "add-component",
+    "justification": "The fixture freeze component has unrestricted JSON schemas and no executor, so it cannot freeze a production request or enforce Idea Spark run-directory invariants."
+  },
+  "verification": {
+    "contractCases": ["a valid absolute workspace and fresh ideaspark_run directory produce a digest-bound prepared request"],
+    "failureCases": ["relative paths, an out-of-workspace run directory, or an empty query fail closed"],
+    "conformanceFixtures": ["packages/research-ideation/src/research-ideation.test.ts"],
+    "idempotencyCases": []
+  },
+  "schemas": [
+    {
+      "schemaVersion": "summer.schema-descriptor/v1",
+      "ref": {"namespace": "researchstudio", "name": "idea-spark-request", "version": "1.0.0"},
+      "jsonSchema": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "required": ["schemaVersion", "query", "workspaceDir", "runDir"]}
+    },
+    {
+      "schemaVersion": "summer.schema-descriptor/v1",
+      "ref": {"namespace": "researchstudio", "name": "idea-spark-prepared", "version": "1.0.0"},
+      "jsonSchema": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "required": ["schemaVersion", "query", "workspaceDir", "runDir", "requestDigest"]}
+    }
+  ],
+  "component": {
+    "schemaVersion": "summer.component-descriptor/v1",
+    "ref": {"namespace": "researchstudio", "name": "idea-spark-prepare", "version": "1.0.0"},
+    "kind": "validator",
+    "inputSchema": {"namespace": "researchstudio", "name": "idea-spark-request", "version": "1.0.0"},
+    "outputSchema": {"namespace": "researchstudio", "name": "idea-spark-prepared", "version": "1.0.0"},
+    "capabilities": ["research.ideation.prepare"],
+    "permissions": [],
+    "effect": "none",
+    "supportsFanout": false
+  },
+  "catalogEntry": {
+    "schemaVersion": "summer.component-catalog-entry/v1",
+    "component": {"namespace": "researchstudio", "name": "idea-spark-prepare", "version": "1.0.0"},
+    "title": "Prepare Idea Spark request",
+    "summary": "Validate and digest-bind a research question and its isolated Idea Spark run directory.",
+    "status": "candidate",
+    "keywords": ["idea spark request", "freeze research question", "研究构思输入"],
+    "domains": ["科研", "research"],
+    "runtimeIds": ["mastra-v0"]
+  },
+  "implementation": {
+    "packagePath": "packages/research-ideation",
+    "registryModule": "packages/research-ideation/src/registry.ts",
+    "runtimeId": "mastra-v0"
+  },
+  "controls": {"humanAuthorization": "none", "retryPolicy": "idempotent-only"}
+}

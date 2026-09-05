@@ -21,7 +21,7 @@ import {
 
 const at = "2026-09-03T08:00:00.000Z";
 const campaignId = "campaign-1";
-const workflowId = "factor-discovery-tuning";
+const workflowId = "campaign-test-workflow";
 const compiledWorkflowDigest = sha256Canonical("compiled");
 const registryDigest = sha256Canonical("registry");
 const planDigest = sha256Canonical("plan-1");

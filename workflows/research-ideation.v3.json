@@ -1,0 +1,239 @@
+{
+  "schemaVersion": "summer.workflow/v1",
+  "workflowId": "research-ideation",
+  "revision": 3,
+  "profile": {
+    "kind": "bounded-flow",
+    "terminalNodeIds": ["verify-terminal"]
+  },
+  "entryNodeId": "freeze-request",
+  "nodes": [
+    {
+      "id": "freeze-request",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-prepare", "version": "2.0.0"}
+    },
+    {
+      "id": "literature-grounding",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "timeoutMs": 3600000,
+      "idempotencyKey": "research-ideation-v3:literature-grounding"
+    },
+    {
+      "id": "phase0-provider-gate",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-provider-gate", "version": "2.0.0"},
+      "timeoutMs": 60000,
+      "idempotencyKey": "research-ideation-v3:phase0-provider-gate"
+    },
+    {
+      "id": "bottleneck-diagnosis",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "timeoutMs": 1800000,
+      "idempotencyKey": "research-ideation-v3:bottleneck-diagnosis"
+    },
+    {
+      "id": "candidate-1-generation",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "timeoutMs": 2700000,
+      "idempotencyKey": "research-ideation-v3:candidate-1-generation"
+    },
+    {
+      "id": "candidate-1-coherence-collision",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "timeoutMs": 2700000,
+      "idempotencyKey": "research-ideation-v3:candidate-1-coherence-collision"
+    },
+    {
+      "id": "candidate-1-provider-gate",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-provider-gate", "version": "2.0.0"},
+      "timeoutMs": 60000,
+      "idempotencyKey": "research-ideation-v3:candidate-1-provider-gate"
+    },
+    {
+      "id": "candidate-1-gauntlet",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "timeoutMs": 3600000,
+      "idempotencyKey": "research-ideation-v3:candidate-1-gauntlet"
+    },
+    {
+      "id": "candidate-1-retry-decision",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-retry-decision", "version": "2.0.0"},
+      "timeoutMs": 60000
+    },
+    {
+      "id": "candidate-2-transition",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-transition", "version": "2.0.0"},
+      "timeoutMs": 600000,
+      "idempotencyKey": "research-ideation-v3:candidate-2-transition"
+    },
+    {
+      "id": "candidate-2-generation",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "timeoutMs": 2700000,
+      "idempotencyKey": "research-ideation-v3:candidate-2-generation"
+    },
+    {
+      "id": "candidate-2-coherence-collision",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "timeoutMs": 2700000,
+      "idempotencyKey": "research-ideation-v3:candidate-2-coherence-collision"
+    },
+    {
+      "id": "candidate-2-provider-gate",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-provider-gate", "version": "2.0.0"},
+      "timeoutMs": 60000,
+      "idempotencyKey": "research-ideation-v3:candidate-2-provider-gate"
+    },
+    {
+      "id": "candidate-2-gauntlet",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "timeoutMs": 3600000,
+      "idempotencyKey": "research-ideation-v3:candidate-2-gauntlet"
+    },
+    {
+      "id": "candidate-2-retry-decision",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-retry-decision", "version": "2.0.0"},
+      "timeoutMs": 60000
+    },
+    {
+      "id": "candidate-3-transition",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-transition", "version": "2.0.0"},
+      "timeoutMs": 600000,
+      "idempotencyKey": "research-ideation-v3:candidate-3-transition"
+    },
+    {
+      "id": "candidate-3-generation",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "timeoutMs": 2700000,
+      "idempotencyKey": "research-ideation-v3:candidate-3-generation"
+    },
+    {
+      "id": "candidate-3-coherence-collision",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "timeoutMs": 2700000,
+      "idempotencyKey": "research-ideation-v3:candidate-3-coherence-collision"
+    },
+    {
+      "id": "candidate-3-provider-gate",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-provider-gate", "version": "2.0.0"},
+      "timeoutMs": 60000,
+      "idempotencyKey": "research-ideation-v3:candidate-3-provider-gate"
+    },
+    {
+      "id": "candidate-3-gauntlet",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "timeoutMs": 3600000,
+      "idempotencyKey": "research-ideation-v3:candidate-3-gauntlet"
+    },
+    {
+      "id": "candidate-3-retry-decision",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-retry-decision", "version": "2.0.0"},
+      "timeoutMs": 60000
+    },
+    {
+      "id": "bottleneck-retry-transition",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-transition", "version": "2.0.0"},
+      "timeoutMs": 600000,
+      "idempotencyKey": "research-ideation-v3:bottleneck-retry-transition"
+    },
+    {
+      "id": "bottleneck-rediagnosis",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "timeoutMs": 1800000,
+      "idempotencyKey": "research-ideation-v3:bottleneck-rediagnosis"
+    },
+    {
+      "id": "post-rediagnosis-generation",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "timeoutMs": 2700000,
+      "idempotencyKey": "research-ideation-v3:post-rediagnosis-generation"
+    },
+    {
+      "id": "post-rediagnosis-coherence-collision",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "timeoutMs": 2700000,
+      "idempotencyKey": "research-ideation-v3:post-rediagnosis-coherence-collision"
+    },
+    {
+      "id": "post-rediagnosis-provider-gate",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-provider-gate", "version": "2.0.0"},
+      "timeoutMs": 60000,
+      "idempotencyKey": "research-ideation-v3:post-rediagnosis-provider-gate"
+    },
+    {
+      "id": "post-rediagnosis-gauntlet",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "timeoutMs": 3600000,
+      "idempotencyKey": "research-ideation-v3:post-rediagnosis-gauntlet"
+    },
+    {
+      "id": "post-rediagnosis-retry-decision",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-retry-decision", "version": "2.0.0"},
+      "timeoutMs": 60000
+    },
+    {
+      "id": "finalize-failure",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-transition", "version": "2.0.0"},
+      "timeoutMs": 1800000,
+      "idempotencyKey": "research-ideation-v3:finalize-failure"
+    },
+    {
+      "id": "package-render",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-stage", "version": "2.0.0"},
+      "timeoutMs": 3600000,
+      "idempotencyKey": "research-ideation-v3:package-render"
+    },
+    {
+      "id": "verify-terminal",
+      "component": {"namespace": "researchstudio", "name": "idea-spark-verify", "version": "2.0.0"},
+      "timeoutMs": 60000
+    }
+  ],
+  "edges": [
+    {"id": "e01", "from": "freeze-request", "to": "literature-grounding", "condition": {"kind": "node-succeeded"}},
+    {"id": "e02", "from": "literature-grounding", "to": "phase0-provider-gate", "condition": {"kind": "node-succeeded"}},
+    {"id": "e03", "from": "phase0-provider-gate", "to": "bottleneck-diagnosis", "condition": {"kind": "node-succeeded"}},
+    {"id": "e04", "from": "bottleneck-diagnosis", "to": "candidate-1-generation", "condition": {"kind": "node-succeeded"}},
+    {"id": "e05", "from": "candidate-1-generation", "to": "candidate-1-coherence-collision", "condition": {"kind": "node-succeeded"}},
+    {"id": "e06", "from": "candidate-1-coherence-collision", "to": "candidate-1-provider-gate", "condition": {"kind": "node-succeeded"}},
+    {"id": "e07", "from": "candidate-1-provider-gate", "to": "candidate-1-gauntlet", "condition": {"kind": "node-succeeded"}},
+    {"id": "e08", "from": "candidate-1-gauntlet", "to": "candidate-1-retry-decision", "condition": {"kind": "node-succeeded"}},
+    {"id": "e09", "from": "candidate-1-retry-decision", "to": "candidate-2-transition", "condition": {"kind": "node-succeeded"}},
+    {"id": "e10", "from": "candidate-2-transition", "to": "candidate-2-generation", "condition": {"kind": "node-succeeded"}},
+    {"id": "e11", "from": "candidate-2-generation", "to": "candidate-2-coherence-collision", "condition": {"kind": "node-succeeded"}},
+    {"id": "e12", "from": "candidate-2-coherence-collision", "to": "candidate-2-provider-gate", "condition": {"kind": "node-succeeded"}},
+    {"id": "e13", "from": "candidate-2-provider-gate", "to": "candidate-2-gauntlet", "condition": {"kind": "node-succeeded"}},
+    {"id": "e14", "from": "candidate-2-gauntlet", "to": "candidate-2-retry-decision", "condition": {"kind": "node-succeeded"}},
+    {"id": "e15", "from": "candidate-2-retry-decision", "to": "candidate-3-transition", "condition": {"kind": "node-succeeded"}},
+    {"id": "e16", "from": "candidate-3-transition", "to": "candidate-3-generation", "condition": {"kind": "node-succeeded"}},
+    {"id": "e17", "from": "candidate-3-generation", "to": "candidate-3-coherence-collision", "condition": {"kind": "node-succeeded"}},
+    {"id": "e18", "from": "candidate-3-coherence-collision", "to": "candidate-3-provider-gate", "condition": {"kind": "node-succeeded"}},
+    {"id": "e19", "from": "candidate-3-provider-gate", "to": "candidate-3-gauntlet", "condition": {"kind": "node-succeeded"}},
+    {"id": "e20", "from": "candidate-3-gauntlet", "to": "candidate-3-retry-decision", "condition": {"kind": "node-succeeded"}},
+    {"id": "e21", "from": "candidate-3-retry-decision", "to": "bottleneck-retry-transition", "condition": {"kind": "node-succeeded"}},
+    {"id": "e22", "from": "bottleneck-retry-transition", "to": "bottleneck-rediagnosis", "condition": {"kind": "node-succeeded"}},
+    {"id": "e23", "from": "bottleneck-rediagnosis", "to": "post-rediagnosis-generation", "condition": {"kind": "node-succeeded"}},
+    {"id": "e24", "from": "post-rediagnosis-generation", "to": "post-rediagnosis-coherence-collision", "condition": {"kind": "node-succeeded"}},
+    {"id": "e25", "from": "post-rediagnosis-coherence-collision", "to": "post-rediagnosis-provider-gate", "condition": {"kind": "node-succeeded"}},
+    {"id": "e26", "from": "post-rediagnosis-provider-gate", "to": "post-rediagnosis-gauntlet", "condition": {"kind": "node-succeeded"}},
+    {"id": "e27", "from": "post-rediagnosis-gauntlet", "to": "post-rediagnosis-retry-decision", "condition": {"kind": "node-succeeded"}},
+    {"id": "e28", "from": "post-rediagnosis-retry-decision", "to": "finalize-failure", "condition": {"kind": "node-succeeded"}},
+    {"id": "e29", "from": "finalize-failure", "to": "package-render", "condition": {"kind": "node-succeeded"}},
+    {"id": "e30", "from": "package-render", "to": "verify-terminal", "condition": {"kind": "node-succeeded"}}
+  ],
+  "metadata": {
+    "domainProtocol": "idea-spark/next",
+    "executionGrant": "summer.execution-grant/v1",
+    "providerStatus": "fail-closed-by-grant-policy",
+    "retryPolicy": {
+      "candidateCyclesPerFraming": 3,
+      "bottleneckRediagnoses": 1,
+      "candidateCyclesAfterRediagnosis": 1,
+      "decisionAuthority": "idea-spark/next"
+    },
+    "telemetry": {
+      "heartbeatJournal": ".summer/heartbeats.jsonl",
+      "receiptJournal": ".summer/receipts.jsonl"
+    },
+    "terminalStates": ["done", "do-not-generate", "phase-3-failed"]
+  }
+}

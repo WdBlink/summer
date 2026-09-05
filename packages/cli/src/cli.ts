@@ -2,11 +2,18 @@
 
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import type { RepositoryRegistryOptions } from "./repository-catalog.js";
 
 import {
   SummerCliOperationError,
+  checkRepositoryExtension,
   compileFixtureWorkflows,
   compileWorkflowFile,
+  inspectRepositoryCatalog,
+  matchRepositoryIntent,
+  matchRepositoryCatalog,
+  resumeRepositoryWorkflow,
+  runRepositoryWorkflow,
   validateWorkflowFile
 } from "./commands.js";
 
@@ -27,13 +34,20 @@ export const SUMMER_PROJECT_ROOT = fileURLToPath(
 const USAGE = [
   "summer validate <workflow.json>",
   "summer compile <workflow.json>",
-  "summer fixtures"
+  "summer fixtures",
+  "summer catalog",
+  "summer run <workflow-id> <input.json>",
+  "summer resume <workflow-id> <run-dir> <grant.json>",
+  "summer match-intent <intent>",
+  "summer match <request.json>",
+  "summer extension-check <proposal.json>"
 ] as const;
 
 export async function runCli(
   argv: readonly string[],
   io: CliIo = DEFAULT_IO,
-  projectRoot: string = SUMMER_PROJECT_ROOT
+  projectRoot: string = SUMMER_PROJECT_ROOT,
+  registryOptions: RepositoryRegistryOptions = {}
 ): Promise<number> {
   const [command, ...args] = argv;
 
@@ -59,6 +73,62 @@ export async function runCli(
       requireArgumentCount(command, args, 0);
       io.stdout(stringify(compileFixtureWorkflows(projectRoot)));
       return 0;
+    }
+
+    if (command === "catalog") {
+      requireArgumentCount(command, args, 0);
+      io.stdout(stringify(inspectRepositoryCatalog(projectRoot)));
+      return 0;
+    }
+
+    if (command === "run") {
+      requireArgumentCount(command, args, 2);
+      io.stdout(
+        stringify(
+          await runRepositoryWorkflow(
+            projectRoot,
+            args[0]!,
+            args[1]!,
+            registryOptions
+          )
+        )
+      );
+      return 0;
+    }
+
+    if (command === "resume") {
+      requireArgumentCount(command, args, 3);
+      io.stdout(
+        stringify(
+          await resumeRepositoryWorkflow(
+            projectRoot,
+            args[0]!,
+            args[1]!,
+            args[2]!,
+            registryOptions
+          )
+        )
+      );
+      return 0;
+    }
+
+    if (command === "match") {
+      requireArgumentCount(command, args, 1);
+      io.stdout(stringify(matchRepositoryCatalog(projectRoot, args[0]!)));
+      return 0;
+    }
+
+    if (command === "match-intent") {
+      requireAtLeastOneArgument(command, args);
+      io.stdout(stringify(matchRepositoryIntent(projectRoot, args.join(" "))));
+      return 0;
+    }
+
+    if (command === "extension-check") {
+      requireArgumentCount(command, args, 1);
+      const result = checkRepositoryExtension(projectRoot, args[0]!);
+      (result.ok ? io.stdout : io.stderr)(stringify(result));
+      return result.ok ? 0 : 1;
     }
 
     throw new SummerCliUsageError(`Unknown command '${command}'`);
@@ -97,6 +167,14 @@ function requireArgumentCount(
   if (args.length !== expected) {
     throw new SummerCliUsageError(
       `Command '${command}' expects ${expected} argument${expected === 1 ? "" : "s"}; received ${args.length}`
+    );
+  }
+}
+
+function requireAtLeastOneArgument(command: string, args: readonly string[]): void {
+  if (args.length === 0 || args.join(" ").trim().length === 0) {
+    throw new SummerCliUsageError(
+      `Command '${command}' expects a non-empty intent`
     );
   }
 }

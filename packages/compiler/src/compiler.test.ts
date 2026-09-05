@@ -57,6 +57,7 @@ function descriptor(
     inputSchema: INPUT_SCHEMA,
     outputSchema: OUTPUT_SCHEMA,
     capabilities: [],
+    permissions: [],
     effect: options.effect ?? "none",
     supportsFanout: options.supportsFanout ?? false
   };

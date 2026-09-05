@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "summer.extension-proposal/v1",
+  "proposalId": "research-ideation-verify-v1",
+  "kind": "component",
+  "rationale": "Close the bounded flow with an independent terminal check over navigator state and content-addressed Idea Spark artifacts.",
+  "requestedCapabilities": ["research.ideation.idea-spark.verify"],
+  "reuseAssessment": {
+    "catalogDigest": "4f45c19c8e53e486c7f218ceacb8dbe80bf4b37ffdab95e6bdf3b9cfc88b2ba2",
+    "reviewedWorkflowIds": ["research-ideation"],
+    "reviewedComponents": [
+      {"namespace": "summer", "name": "terminal-receipt", "version": "1.0.0"}
+    ],
+    "conclusion": "add-component",
+    "justification": "The fixture terminal accepts unrestricted JSON and cannot prove that a canonical Idea Spark terminal state or its required rendered artifacts exist."
+  },
+  "verification": {
+    "contractCases": ["DONE requires three non-empty idea cards and alternative terminal states require their named markdown artifact"],
+    "failureCases": ["missing, empty, or changed terminal artifacts fail verification"],
+    "conformanceFixtures": ["packages/research-ideation/src/research-ideation.test.ts"],
+    "idempotencyCases": []
+  },
+  "schemas": [
+    {
+      "schemaVersion": "summer.schema-descriptor/v1",
+      "ref": {"namespace": "researchstudio", "name": "idea-spark-execution", "version": "1.0.0"},
+      "jsonSchema": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "required": ["schemaVersion", "request", "terminalStatus", "navigator", "stageRuns"]}
+    },
+    {
+      "schemaVersion": "summer.schema-descriptor/v1",
+      "ref": {"namespace": "researchstudio", "name": "idea-spark-result", "version": "1.0.0"},
+      "jsonSchema": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "required": ["schemaVersion", "status", "requestDigest", "runDir", "navigator", "stageRuns", "artifacts"]}
+    }
+  ],
+  "component": {
+    "schemaVersion": "summer.component-descriptor/v1",
+    "ref": {"namespace": "researchstudio", "name": "idea-spark-verify", "version": "1.0.0"},
+    "kind": "validator",
+    "inputSchema": {"namespace": "researchstudio", "name": "idea-spark-execution", "version": "1.0.0"},
+    "outputSchema": {"namespace": "researchstudio", "name": "idea-spark-result", "version": "1.0.0"},
+    "capabilities": ["research.ideation.idea-spark.verify"],
+    "permissions": ["filesystem.research-artifact.read"],
+    "effect": "read",
+    "supportsFanout": false
+  },
+  "catalogEntry": {
+    "schemaVersion": "summer.component-catalog-entry/v1",
+    "component": {"namespace": "researchstudio", "name": "idea-spark-verify", "version": "1.0.0"},
+    "title": "Verify Idea Spark terminal",
+    "summary": "Verify the terminal navigator state and digest every required Idea Spark output artifact.",
+    "status": "candidate",
+    "keywords": ["idea card verification", "terminal research result", "研究构思验收"],
+    "domains": ["科研", "research"],
+    "runtimeIds": ["mastra-v0"]
+  },
+  "implementation": {
+    "packagePath": "packages/research-ideation",
+    "registryModule": "packages/research-ideation/src/registry.ts",
+    "runtimeId": "mastra-v0"
+  },
+  "controls": {"humanAuthorization": "none", "retryPolicy": "idempotent-only"}
+}

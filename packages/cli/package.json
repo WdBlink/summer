@@ -22,9 +22,12 @@
     "test": "vitest run src"
   },
   "dependencies": {
+    "@summer/catalog": "workspace:*",
     "@summer/compiler": "workspace:*",
     "@summer/components": "workspace:*",
-    "@summer/protocol": "workspace:*"
+    "@summer/protocol": "workspace:*",
+    "@summer/research-ideation": "workspace:*",
+    "@summer/runtime-mastra": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "22.20.1",

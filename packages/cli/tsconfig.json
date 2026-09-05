@@ -10,6 +10,9 @@
   "references": [
     { "path": "../protocol" },
     { "path": "../components" },
-    { "path": "../compiler" }
+    { "path": "../compiler" },
+    { "path": "../catalog" },
+    { "path": "../research-ideation" },
+    { "path": "../runtime-mastra" }
   ]
 }

@@ -7,6 +7,9 @@ import {
 } from "@mastra/core/workflows";
 import {
   JsonValueSchema,
+  JsonObjectSchema,
+  NodeReceiptV1Schema,
+  ArtifactReferenceV1Schema,
   canonicalJson,
   parseCompiledWorkflowV1,
   sha256Canonical,
@@ -16,6 +19,8 @@ import {
   type ExactComponentRef,
   type ExactSchemaRef,
   type JsonValue,
+  type NodeReceiptV1,
+  type ArtifactReferenceV1,
   type SchemaDescriptorV1,
   type WorkflowEdgeV1
 } from "@summer/protocol";
@@ -84,6 +89,12 @@ export interface MastraWorkflowBinding {
   readonly workflow: AnyWorkflow;
   /** Serializable explanation of the exact subset translated by this adapter. */
   readonly plan: MastraAdapterPlanV1;
+}
+
+export interface MastraWorkflowOptions {
+  readonly onReceipt?: (
+    receipt: NodeReceiptV1
+  ) => void | Promise<void>;
 }
 
 type ErasedMastraStep = Step<
@@ -191,7 +202,8 @@ export function planMastraWorkflow(input: unknown): MastraAdapterPlanV1 {
 /** Create executable Mastra steps/workflows after verifying runtime bindings. */
 export function createMastraWorkflow(
   input: unknown,
-  registry: ComponentRegistry
+  registry: ComponentRegistry,
+  options: MastraWorkflowOptions = {}
 ): MastraWorkflowBinding {
   const workflow = parseCompiled(input);
   const plan = planMastraWorkflow(workflow);
@@ -200,7 +212,10 @@ export function createMastraWorkflow(
   const nodeById = new Map(workflow.nodes.map((node) => [node.id, node]));
   const stepByNodeId = new Map<string, ErasedMastraStep>();
   for (const node of workflow.nodes) {
-    stepByNodeId.set(node.id, createComponentStep(workflow, node, registry));
+    stepByNodeId.set(
+      node.id,
+      createComponentStep(workflow, node, registry, options)
+    );
   }
 
   const initStep = createStep({
@@ -584,7 +599,8 @@ function verifyRuntimeBindings(
 function createComponentStep(
   workflow: CompiledWorkflowV1,
   node: CompiledWorkflowNodeV1,
-  registry: ComponentRegistry
+  registry: ComponentRegistry,
+  options: MastraWorkflowOptions
 ): ErasedMastraStep {
   const executor = registry.resolveExecutor(node.component);
   const inputBinding = registry.resolveSchemaBinding(
@@ -607,38 +623,73 @@ function createComponentStep(
     },
     execute: async ({ inputData, runId, retryCount, abortSignal }) => {
       const envelope = SummerMastraEnvelopeV1Schema.parse(inputData);
+      const attempt = retryCount + 1;
+      const startedAt = new Date().toISOString();
       const rawInput = cloneJson(
         node.input === undefined ? envelope.current : node.input
       );
-      const parsedInput = JsonValueSchema.parse(
-        await inputBinding.parseAsync(rawInput)
-      );
-      const rawOutput = await executeWithTimeout(
+      const inputDigest = sha256Canonical(rawInput);
+      let output: JsonValue;
+      try {
+        const parsedInput = JsonValueSchema.parse(
+          await inputBinding.parseAsync(rawInput)
+        );
+        const rawOutput = await executeWithTimeout(
+          node,
+          abortSignal,
+          (signal) =>
+            executor(cloneJson(parsedInput), {
+              workflowId: workflow.workflowId,
+              workflowRevision: workflow.revision,
+              runId,
+              nodeId: node.id,
+              attempt,
+              ...(envelope.campaignId === undefined
+                ? {}
+                : { campaignId: envelope.campaignId }),
+              ...(envelope.experimentId === undefined
+                ? {}
+                : { experimentId: envelope.experimentId }),
+              ...(node.idempotencyKey === undefined
+                ? {}
+                : { idempotencyKey: node.idempotencyKey }),
+              signal
+            })
+        );
+        output = JsonValueSchema.parse(
+          await outputBinding.parseAsync(rawOutput)
+        );
+      } catch (error) {
+        const receipt = createNodeReceipt({
+          workflow,
+          node,
+          envelope,
+          runId,
+          attempt,
+          status: "failed",
+          inputDigest,
+          error,
+          startedAt,
+          completedAt: new Date().toISOString()
+        });
+        await options.onReceipt?.(receipt);
+        throw error;
+      }
+      const receipt = createNodeReceipt({
+        workflow,
         node,
-        abortSignal,
-        (signal) =>
-          executor(cloneJson(parsedInput), {
-            workflowId: workflow.workflowId,
-            workflowRevision: workflow.revision,
-            runId,
-            nodeId: node.id,
-            attempt: retryCount + 1,
-            ...(envelope.campaignId === undefined
-              ? {}
-              : { campaignId: envelope.campaignId }),
-            ...(envelope.experimentId === undefined
-              ? {}
-              : { experimentId: envelope.experimentId }),
-            ...(node.idempotencyKey === undefined
-              ? {}
-              : { idempotencyKey: node.idempotencyKey }),
-            signal
-          })
-      );
-      const output = JsonValueSchema.parse(
-        await outputBinding.parseAsync(rawOutput)
-      );
-      return withNodeOutput(envelope, node.id, cloneJson(output));
+        envelope,
+        runId,
+        attempt,
+        status: "succeeded",
+        inputDigest,
+        outputDigest: sha256Canonical(output),
+        artifactRefs: extractArtifactRefs(output),
+        startedAt,
+        completedAt: new Date().toISOString()
+      });
+      await options.onReceipt?.(receipt);
+      return withNodeOutput(envelope, node.id, cloneJson(output), receipt);
     }
   });
 }
@@ -679,6 +730,7 @@ function createBranchMergeStep(
       }
 
       const outputs: Record<string, JsonValue> = {};
+      const receipts = new Map<string, NodeReceiptV1>();
       for (const envelope of envelopes) {
         if (envelope === undefined) continue;
         for (const [nodeId, output] of Object.entries(envelope.outputs)) {
@@ -690,6 +742,18 @@ function createBranchMergeStep(
             throw new Error(`parallel branches disagree on output for node '${nodeId}'`);
           }
           outputs[nodeId] = cloneJson(output);
+        }
+        for (const receipt of envelope.receipts) {
+          const existing = receipts.get(receipt.receiptId);
+          if (
+            existing !== undefined &&
+            canonicalJson(existing) !== canonicalJson(receipt)
+          ) {
+            throw new Error(
+              `parallel branches disagree on receipt '${receipt.receiptId}'`
+            );
+          }
+          receipts.set(receipt.receiptId, receipt);
         }
       }
 
@@ -708,6 +772,9 @@ function createBranchMergeStep(
         initialInput: base.initialInput,
         current,
         outputs,
+        receipts: [...receipts.values()].sort((left, right) =>
+          left.receiptId.localeCompare(right.receiptId)
+        ),
         ...(base.campaignId === undefined
           ? {}
           : { campaignId: base.campaignId }),
@@ -716,6 +783,79 @@ function createBranchMergeStep(
           : { experimentId: base.experimentId })
       });
     }
+  });
+}
+
+function createNodeReceipt(input: {
+  readonly workflow: CompiledWorkflowV1;
+  readonly node: CompiledWorkflowNodeV1;
+  readonly envelope: SummerMastraEnvelopeV1;
+  readonly runId: string;
+  readonly attempt: number;
+  readonly status: "succeeded" | "failed";
+  readonly inputDigest: string;
+  readonly outputDigest?: string;
+  readonly artifactRefs?: readonly ArtifactReferenceV1[];
+  readonly error?: unknown;
+  readonly startedAt: string;
+  readonly completedAt: string;
+}): NodeReceiptV1 {
+  const receiptId = `node-${sha256Canonical({
+    compiledWorkflowDigest: input.workflow.compiledDigest,
+    runId: input.runId,
+    nodeId: input.node.id,
+    attempt: input.attempt
+  }).slice(0, 48)}`;
+  return NodeReceiptV1Schema.parse({
+    schemaVersion: "summer.node-receipt/v1",
+    receiptId,
+    workflowId: input.workflow.workflowId,
+    workflowRevision: input.workflow.revision,
+    compiledWorkflowDigest: input.workflow.compiledDigest,
+    registryDigest: input.workflow.registryDigest,
+    runId: input.runId,
+    ...(input.envelope.campaignId === undefined
+      ? {}
+      : {campaignId: input.envelope.campaignId}),
+    nodeId: input.node.id,
+    attempt: input.attempt,
+    component: input.node.component,
+    status: input.status,
+    ...(input.node.idempotencyKey === undefined
+      ? {}
+      : {idempotencyKey: input.node.idempotencyKey}),
+    inputDigest: input.inputDigest,
+    ...(input.outputDigest === undefined
+      ? {}
+      : {outputDigest: input.outputDigest}),
+    artifactRefs: input.artifactRefs ?? [],
+    ...(input.status === "failed"
+      ? {
+          error: {
+            code: errorCode(input.error),
+            message: errorMessage(input.error),
+            retryable: input.attempt < input.node.maxAttempts,
+            ...errorDetails(input.error)
+          }
+        }
+      : {}),
+    startedAt: input.startedAt,
+    completedAt: input.completedAt
+  });
+}
+
+function extractArtifactRefs(output: JsonValue): readonly ArtifactReferenceV1[] {
+  if (
+    typeof output !== "object" ||
+    output === null ||
+    Array.isArray(output) ||
+    !Array.isArray(output.artifacts)
+  ) {
+    return [];
+  }
+  return output.artifacts.flatMap((candidate) => {
+    const parsed = ArtifactReferenceV1Schema.safeParse(candidate);
+    return parsed.success ? [parsed.data] : [];
   });
 }
 
@@ -834,6 +974,34 @@ function sum(values: readonly number[]): number {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function errorCode(error: unknown): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof (error as {readonly code?: unknown}).code === "string"
+  ) {
+    const value = (error as {readonly code: string}).code.replace(
+      /[^A-Za-z0-9._:-]/g,
+      "-"
+    );
+    if (/^[A-Za-z0-9]/.test(value)) return value.slice(0, 160);
+  }
+  return "COMPONENT_EXECUTION_FAILED";
+}
+
+function errorDetails(
+  error: unknown
+): { readonly details: Record<string, JsonValue> } | Record<string, never> {
+  if (typeof error !== "object" || error === null || !("details" in error)) {
+    return {};
+  }
+  const parsed = JsonObjectSchema.safeParse(
+    (error as { readonly details?: unknown }).details
+  );
+  return parsed.success ? { details: parsed.data } : {};
 }
 
 function unsupportedShape(message: string): never {
