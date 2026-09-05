@@ -1,5 +1,15 @@
 # Research ideation v3 invocation
 
+## Native v4 for new runs
+
+New runs should use `summer run research-ideation@4 <request.json>` with the same
+typed request and provider grant described below. Native v4 uses Mastra branches,
+a bounded candidate loop and LibSQL checkpoints. Resume a suspended v4 run with
+`summer resume research-ideation@4 <run-dir> <fresh-grant.json>`. Failed host-worker
+effects are not automatically replayed. Do not send an existing v3 run to v4.
+
+The remaining sections document the legacy v3 path, retained for its existing runs.
+
 Use this contract only after `summer match-intent` selects the dispatchable `research-ideation@3` Flow and the user asks to execute it.
 
 ## Request

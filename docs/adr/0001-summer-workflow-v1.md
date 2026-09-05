@@ -1,6 +1,7 @@
 # ADR 0001: One workflow IR and one campaign authority
 
 - Status: Accepted
+- Native 0.1 direction: [ADR 0003](0003-mastra-first-workflow-products.md) supersedes runtime-neutral expansion; this ADR still describes legacy v1 contracts.
 - Date: 2026-09-03
 
 ## Context

@@ -44,3 +44,7 @@ export {
   type DynamicTaskCommandRunner,
   type DynamicTaskRuntimeOptions
 } from "./dynamic-task.js";
+export { ProductSchema, ProductGrantSchema, ProductRequestSchema, PRODUCT_TOOLS, productContracts, validateProduct, executeProduct, resumeProduct, recoverProduct, productStatus, type Product, type ProductRunner } from "./products.js";
+export { planProduct } from "./product-planner.js";
+export { listProducts, loadProduct, matchProducts, promoteProduct, verifyProduct, publishProduct, selectProduct } from "./product-library.js";
+export { QuantPlanSchema, runQuantLoop, resumeQuantLoop } from "./quant-loop.js";

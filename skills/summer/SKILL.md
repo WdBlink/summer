@@ -1,65 +1,90 @@
 ---
 name: summer
-description: Match user requests to registered Summer workflows, components, and runtimes; validate typed workflows; and frame protocol-compliant extensions. Use for Summer capability routing or secondary development, never as an OPC alias.
+description: Select, execute, verify and publish reusable Summer workflow products; use native dynamic planning for new tasks and registered components for extensions.
 ---
 
 # Summer
 
-Use Summer as a thin discovery and interaction layer. Translate intent into typed requests, but let the Catalog, Registry, Compiler, runtime adapter, and campaign ledger remain authoritative. Never keep a second cursor, infer hidden transitions, rewrite receipts, or decide a campaign outcome in the Skill.
+Summer is a thin interaction layer over a Mastra-native workflow product library.
+The runtime owns execution state and acceptance. Do not keep a Skill-owned cursor,
+manually advance research stages, rewrite receipts, or infer authority from task text.
 
-## Locate Summer
+## Locate and discover
 
-Locate the checkout and verify the CLI before routing. Cloning the repository does not install this Skill.
+Locate the repository (normally /Users/wdblink/summer), then inspect real capabilities:
 
 ```bash
 SUMMER_REPO=/absolute/path/to/summer
 pnpm --silent --dir "$SUMMER_REPO" summer catalog
 pnpm --silent --dir "$SUMMER_REPO" summer match-intent "the user's request"
-pnpm --silent --dir "$SUMMER_REPO" summer run research-ideation /absolute/path/to/request.json
-pnpm --silent --dir "$SUMMER_REPO" summer run dynamic-agent-workflow /absolute/path/to/request.json
-pnpm --silent --dir "$SUMMER_REPO" summer resume research-ideation /absolute/path/to/run-dir /absolute/path/to/fresh-grant.json
-pnpm --silent --dir "$SUMMER_REPO" summer match /absolute/path/to/match-request.json
-pnpm --silent --dir "$SUMMER_REPO" summer extension-check /absolute/path/to/proposal.json
-pnpm --silent --dir "$SUMMER_REPO" summer validate /absolute/path/to/workflow.json
-pnpm --silent --dir "$SUMMER_REPO" summer compile /absolute/path/to/workflow.json
-pnpm --silent --dir "$SUMMER_REPO" summer fixtures
+pnpm --silent --dir "$SUMMER_REPO" summer contracts
 ```
 
-## Match existing capabilities
+Read both legacy catalog results and the new `products` / `nativeWorkflows` fields.
+A fixture is not executable. Matching recommends capabilities; it does not authorize
+execution. Published definitions are pinned by exact version for each run.
 
-Run `match-intent` for ordinary natural-language requests. Use a typed `summer.match-request/v1` file when profile, component kind, exact capability, runtime, or preferred ID constraints matter. Read [references/matching.md](references/matching.md) for the request contract and decision rules.
+## Route the request
 
-- Prefer a matched workflow for an end-to-end goal and its declared component list for composition.
-- Use component matches for atomic work or extension design.
-- Treat `ambiguous` as a user choice, not permission to pick the first candidate.
-- Treat `no-match` or `capabilityGaps` as an extension candidate.
-- Check `dispatchable` before proposing execution. If false, report the exact blockers; a fixture or descriptor is not a runnable capability.
-- When the selected bounded Flow is dispatchable and the user asked to execute it, use `summer run <workflow-id> <input.json>`; never bypass the selected runtime with an ad-hoc prompt chain.
+- Prefer a published product whose stated purpose, inputs and acceptance fit.
+- For new research ideation, prefer explicit `research-ideation@4`; preserve v3
+  for existing v3 runs. Read [references/research-ideation.md](references/research-ideation.md).
+- If the user explicitly asks for dynamic planning, or no specialized workflow fits
+  but registered tools suffice, use native `summer dynamic`.
+- If a required executor is absent, describe the missing component and design an
+  extension. Dynamic planning cannot invent an executor.
+- Preserve ambiguity when multiple candidates fit; explain the distinction and ask.
+  Keyword scores are retrieval evidence, not semantic confidence.
+- Never automatically fall back from a failed specialized workflow to an unrestricted
+  agent chain or silently weaken provider/acceptance rules.
 
-## Frame an extension
+For native product execution, planning, promotion, verification, publication or
+recovery, read [references/workflow-products.md](references/workflow-products.md).
+Use `summer contracts` as the source for exact schemas.
 
-Search the current catalog before designing anything new. If reuse or composition cannot satisfy the request, read [references/extensions.md](references/extensions.md), create a `summer.extension-proposal/v1` artifact, and run `extension-check`.
+## Reuse and productize
 
-A valid proposal is admissible design input, not implemented code and not a registered capability. Only describe it as available after its schemas, descriptor, executor, registry entry, runtime conformance, tests, and catalog status are committed together.
+```bash
+pnpm --silent --dir "$SUMMER_REPO" summer run-product product-id@1 request.json
+pnpm --silent --dir "$SUMMER_REPO" summer dynamic brief.json request.json
+pnpm --silent --dir "$SUMMER_REPO" summer status /absolute/run-dir
+pnpm --silent --dir "$SUMMER_REPO" summer promote /absolute/run-dir candidate.json
+pnpm --silent --dir "$SUMMER_REPO" summer verify /absolute/draft.json suite.json
+pnpm --silent --dir "$SUMMER_REPO" summer publish /absolute/draft.json
+```
 
-## Runtime boundary
+A satisfied user can request promotion. Parameterize task-specific content, remove
+private literals and undocumented manual interventions, preserve acceptance, and
+present the draft changes. One success creates a candidate, not a release.
+Verification executes real tools and needs appropriately scoped grants. Publish only
+when requested, after verification; local publication does not authorize git push.
 
-`research-ideation@3` is executable through `summer run`. Its request must conform to `summer.research-ideation-request/v2` and include an active, exact-scope `summer.execution-grant/v1` with typed `networkDisclosure`. Read [references/research-ideation.md](references/research-ideation.md) before constructing or running this request. Create a local grant only after the user has explicitly asked to execute the Flow; never derive authority or provider relaxation from the research query. Resume only with `summer resume research-ideation <run-dir> <fresh-grant.json>`: it loads the immutable query and paths from `.summer/request.json`, verifies its digest, creates a fresh invocation identity, and refuses a modified request. Never make an “authorized” copy of the query or run directory.
+## Boundaries
 
-`dynamic-agent-workflow@1` is the general fallback when the user explicitly wants live task-specific orchestration or no specialized workflow matches. Read [references/dynamic-agent-workflow.md](references/dynamic-agent-workflow.md) before constructing its typed request. On every invocation Summer selects the strongest visible Codex host model at its maximum supported effort, validates the Mastra Dynamic Workflow it generates, and dispatches only granted Codex or MiniMax workers. Do not replace this with a Skill-authored prompt chain or claim that MiniMax workers can edit files: the current MiniMax executor has no tools.
+- A grant must reflect the user's request, scope, providers and actual authority.
+  It is not an OS sandbox. Do not manufacture approval for a blocked operation.
+- Codex host workers require explicit `allowUnrestrictedHostWorker` opt-in; hidden
+  descendant calls are not strictly counted. MiniMax workers have no tools.
+- Pause/resume uses native checkpoints and fresh grants. Unknown host write effects
+  require reconciliation; never recreate the plan on resume.
+- Fixed graphs may contain parameterized branches and bounded loops. Fixed means
+  stable contracts, not identical model text.
+- The offline quant loop needs published experiment products and frozen evidence
+  identities. It has no bundled Vibe-Trading backtest adapter, live trading, or
+  autonomous candidate optimizer. Do not present synthetic tests as factor evidence.
+- Never register or forward an OPC compatibility alias.
 
-The Flow owns its explicit stage, provider-gate, retry-decision, and transition nodes. Do not manually drive `idea-spark/next`, emulate a retry, treat degraded provider retrieval as success, or rewrite `.summer/receipts.jsonl`. Iterative production campaigns are still unsupported: if a user asks to start, resume, schedule, or persist one, report that boundary. Do not simulate campaign state with Skill-owned state, repeated prompts, cron, or direct Mastra internals.
+## Secondary development and legacy support
 
-## Operating rules
+Use existing registered primitives first. Native products use `summer.product/v2`
+and `validate-product`; adding a primitive requires its executor, exact ID, scope/
+effect handling, schema and failure tests together. Do not introduce generated code
+into a serialized graph.
 
-- Accept only declared Summer protocol data. Never execute JavaScript embedded in a workflow or extension proposal.
-- Resolve exact component/schema versions and use the current `catalogDigest`; stale reuse assessments must be repeated.
-- Treat `bounded-flow` and `iterative-campaign` as authoring profiles for the same compiled IR.
-- Fail closed on unknown capabilities, missing permissions, incompatible runtimes, invalid effects/retries, or unsupported graph shapes.
-- A Frame Check produces `FrameAssessment`. The reducer accepts a `DecisionReceipt` only when its digest matches the frozen Decision Policy descriptor and its decision selects a declared typed edge; producer authentication is a later runtime concern.
-- Child runs may own local execution state and transient retry. They never own the campaign research cursor, posterior, cross-round backlog, or campaign terminal state.
-- Preserve immutable identities and digests. Exact replay may be idempotent; conflicting replay must fail.
-- Request user authorization at the point an actual workflow needs a privileged, irreversible, or externally visible action.
-- When installed in a compatible host, invoke the Skill as `$summer`. Never register, forward, or describe `/opc` as a compatibility alias.
-
-Read [references/protocol.md](references/protocol.md) when authoring a workflow, diagnosing a compiler failure, or explaining campaign decisions.
+Legacy v1 compiler or extension work still uses
+[references/extensions.md](references/extensions.md),
+[references/matching.md](references/matching.md) and
+[references/protocol.md](references/protocol.md).
+Legacy dynamic requests use
+[references/dynamic-agent-workflow.md](references/dynamic-agent-workflow.md).
+Do not apply v1 DAG assumptions to native v2 products or migrate old runs implicitly.

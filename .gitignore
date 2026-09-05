@@ -5,3 +5,5 @@ coverage/
 *.tsbuildinfo
 .summer/
 .summer-runs/
+.summer-v2/
+products/drafts/

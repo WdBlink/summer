@@ -32,6 +32,7 @@ import {
 } from "./commands.js";
 import { SUMMER_PROJECT_ROOT, runCli, type CliIo } from "./cli.js";
 import { compileRepositoryCatalog } from "./repository-catalog.js";
+import { runNativeResearch } from "@summer/research-ideation";
 
 interface CapturedIo {
   readonly io: CliIo;
@@ -977,6 +978,35 @@ class FakeIdeaSparkDriver implements IdeaSparkDriver {
     return {snapshot: snapshot(this.#category)};
   }
 }
+
+describe("native research v4", () => {
+  it("uses typed conditional retry routes and persisted nested workflow checkpoints", async () => {
+    const workspaceDir = mkdtempSync(resolve(tmpdir(), "summer-native-research-"));
+    const runDir = resolve(workspaceDir, "ideaspark_run", "native");
+    const base = new FakeIdeaSparkDriver(true, ["retry-candidate", "retry-bottleneck", "package"]);
+    let gauntlet = 0;
+    const routes = ["retry-candidate", "retry-bottleneck", "package"] as const;
+    const driver: IdeaSparkDriver = {
+      inspect: (...args) => base.inspect(),
+      advance: async (stage, request) => {
+        const advanced = await base.advance(stage, request);
+        return { ...advanced, snapshot: { ...advanced.snapshot,
+          ...(stage === "quality-gauntlet" ? { retryDecision: routes[gauntlet++]! } : {})
+        } };
+      }
+    };
+    const input = { schemaVersion: "summer.research-ideation-request/v2", query: "Find one idea", workspaceDir, runDir, executionGrant: executionGrant(workspaceDir, runDir) };
+    try {
+      const paused = await runNativeResearch(input, { driver, pauseAfter: 2 });
+      expect(paused.status).toBe("suspended");
+      const result = await runNativeResearch({ ...input, executionGrant: { ...input.executionGrant, grantId: "native-resume-grant" } }, { driver, resume: true });
+      expect(result.status).toBe("success");
+      expect(base.stages.filter((stage) => stage === "literature-grounding")).toHaveLength(1);
+      expect(base.stages.filter((stage) => stage === "candidate-generation")).toHaveLength(3);
+      expect(base.stages).toContain("bottleneck-retry-transition");
+    } finally { rmSync(workspaceDir, { recursive: true, force: true }); }
+  });
+});
 
 const RESEARCH_IDEATION_NODE_ORDER = [
   "freeze-request",

@@ -11,7 +11,9 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -b",
     "clean": "tsc -b --clean",
@@ -19,6 +21,8 @@
     "test": "vitest run --root ../.. packages/research-ideation/src/research-ideation.test.ts"
   },
   "dependencies": {
+    "@mastra/core": "1.63.2",
+    "@mastra/libsql": "^1.22.3",
     "@summer/components": "workspace:*",
     "@summer/protocol": "workspace:*",
     "zod": "4.5.4"
