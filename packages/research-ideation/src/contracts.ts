@@ -430,7 +430,8 @@ export const IdeaSparkNavigatorSnapshotV1Schema = z
     type: z.string().trim().min(1),
     category: IdeaSparkNavigatorCategorySchema,
     digest: z.string().regex(/^[a-f0-9]{64}$/),
-    terminalStatus: IdeaSparkTerminalStatusSchema.optional()
+    terminalStatus: IdeaSparkTerminalStatusSchema.optional(),
+    retryDecision: z.enum(["retry-candidate", "retry-bottleneck", "package", "finalize-failure", "terminal"]).optional()
   })
   .strict();
 

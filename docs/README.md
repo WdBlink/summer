@@ -2,7 +2,9 @@
 
 [Repository README](../README.md)
 
-This manual covers the repository as it exists now: two executable bounded workflows, a JSON CLI, a strict workflow/catalog protocol, and an in-memory campaign-core fixture.
+Start with [Workflow products (0.1)](workflow-products.md) for native dynamic planning,
+reusable releases, checkpoints, research v4 and the offline quantitative loop.
+See the [0.1.0 changelog](../CHANGELOG.md) for additions, upgrade notes and limits.
 
 ## Getting started
 
@@ -23,23 +25,27 @@ pnpm --silent summer match-intent "use a dynamic multi-model workflow for this r
 
 Matching returns explainable JSON and never starts execution. Before running anything, follow the workflow-specific guide and create its complete typed request:
 
-- [Research ideation](workflows/research-ideation.md) — requires Idea Spark, `python3`, and `codex`; supports typed application-layer resume.
-- [Dynamic agent workflow](workflows/dynamic-agent-workflow.md) — requires the host Codex model catalog and the configured local worker CLIs; no resume.
+- [Native research ideation v4](workflow-products.md#native-research-ideation-v4) — requires Idea Spark, `python3`, and `codex`; native branches and suspended-checkpoint resume.
+- [Native dynamic planning](workflow-products.md#dynamic-planning) — requires a product brief, a granted host Codex planner and configured worker CLIs; the generated product uses native execution.
+- [Offline factor tuning](workflow-products.md#offline-factor-tuning) — composes published experiments with frozen comparison identities; no bundled backtest engine.
 
-Both workflows invoke models and may write files. Their grants validate request shape and declared scope at the application layer; they do not create an OS sandbox.
+Model workflows may invoke providers and write files. Grants validate request shape and declared scope at the application layer; they do not create an OS sandbox.
 
 ## Manual
 
-1. [Core concepts](core-concepts.md) — protocol layers, authority, invariants, architecture, safety, and persistence.
+- [Workflow products](workflow-products.md) — native contracts, worked example, publication and recovery.
+
+1. [Core concepts](core-concepts.md) — legacy v1 protocol layers and authority; native development follows ADR 0003.
 2. [CLI reference](cli.md) — all commands, JSON output, exit codes, and safe examples.
-3. [Research ideation workflow](workflows/research-ideation.md) — request contract, graph, gates, retries, artifacts, and resume.
-4. [Dynamic agent workflow](workflows/dynamic-agent-workflow.md) — request contract, generated graph, worker policy, artifacts, and limitations.
-5. [Extension development](extensions.md) — catalog-first component and workflow additions.
+3. [Legacy research ideation workflow](workflows/research-ideation.md) — shared request contract and provider gates; v3 graph and application-layer resume.
+4. [Legacy dynamic agent workflow](workflows/dynamic-agent-workflow.md) — v1 request, graph, worker policy and limitations.
+5. [Legacy extension development](extensions.md) — catalog-first v1 component and workflow additions.
 
 ## Design and implementation references
 
 - [ADR 0001: one workflow IR and one campaign authority](adr/0001-summer-workflow-v1.md)
 - [ADR 0002: capability catalog and extension gate](adr/0002-capability-catalog-and-extension-gate.md)
+- [ADR 0003: Mastra-first workflow products](adr/0003-mastra-first-workflow-products.md) — current development direction.
 - [Mastra adapter support matrix](../packages/runtime-mastra/README.md)
 - [Conformance fixtures](../fixtures/README.md)
 - [Historical extension proposals](../proposals/README.md)

@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { superviseProcess } from "@summer/components";
 import { randomUUID } from "node:crypto";
 import {
   appendFileSync,
@@ -243,15 +243,30 @@ export function parseNavigatorOutput(
 
   const terminalStatus = terminalStatusFrom(state, type);
   const category = classifyNavigator(state, step, type, terminalStatus);
+  const retryDecision = navigatorRetryDecision(category, state, step);
   return IdeaSparkNavigatorSnapshotV1Schema.parse({
     schemaVersion: "summer.idea-spark-navigator-snapshot/v1",
     state,
     step,
     type,
     category,
+    ...(retryDecision === undefined ? {} : { retryDecision }),
     digest: sha256Canonical({ stdout, stderr }),
     ...(terminalStatus === undefined ? {} : { terminalStatus })
   });
+}
+
+// Compatibility boundary for the installed Idea Spark text navigator. Native
+// Summer control flow consumes only this closed decision, never prompt prose.
+function navigatorRetryDecision(category: IdeaSparkNavigatorCategory, state: string, step: string): IdeaSparkNavigatorSnapshotV1["retryDecision"] {
+  if (category === "terminal") return "terminal";
+  if (category === "phase4") return "package";
+  if (category !== "phase3") return undefined;
+  const text = `${state}\n${step}`.toLowerCase();
+  if (text.includes("re-diagnose") || text.includes("bottleneck-level retry")) return "retry-bottleneck";
+  if (text.includes("archive attempt") && (text.includes("regenerate") || text.includes("retry"))) return "retry-candidate";
+  if (text.includes("write phase_3_failed") || text.includes("phase_3_failed.md") || text.includes("retry budget exhausted")) return "finalize-failure";
+  return undefined;
 }
 
 function terminalStatusFrom(
@@ -552,83 +567,14 @@ export async function spawnCapture(
   args: readonly string[],
   options: SpawnCaptureOptions
 ): Promise<SpawnCaptureResult> {
-  return await new Promise<SpawnCaptureResult>((resolvePromise, reject) => {
-    const child = spawn(command, [...args], {
-      cwd: options.cwd,
-      env: process.env,
-      stdio: ["pipe", "pipe", "pipe"]
-    });
-    let stdout = "";
-    let stderr = "";
-    let lastActivityAt = new Date().toISOString();
-    let killTimer: NodeJS.Timeout | undefined;
-    const onAbort = (): void => {
-      child.kill("SIGTERM");
-      killTimer = setTimeout(
-        () => child.kill("SIGKILL"),
-        options.terminationGraceMs ?? 5_000
-      );
-    };
-    if (options.signal?.aborted === true) {
-      onAbort();
-    } else {
-      options.signal?.addEventListener("abort", onAbort, { once: true });
-    }
-    const heartbeatTimer =
-      options.heartbeatIntervalMs === undefined || options.onHeartbeat === undefined
-        ? undefined
-        : setInterval(() => {
-            options.onHeartbeat?.({
-              observedAt: new Date().toISOString(),
-              lastActivityAt,
-              ...(child.pid === undefined ? {} : { pid: child.pid })
-            });
-          }, options.heartbeatIntervalMs);
-
-    child.stdout.on("data", (chunk: Buffer | string) => {
-      lastActivityAt = new Date().toISOString();
-      const next = stdout + chunk.toString();
-      stdout = options.preserveStdout === true ? next : tail(next);
-    });
-    child.stderr.on("data", (chunk: Buffer | string) => {
-      lastActivityAt = new Date().toISOString();
-      stderr = tail(stderr + chunk.toString());
-    });
-    child.once("error", (error) => {
-      cleanup();
-      reject(
-        new ResearchIdeationExecutionError(
-          "PROCESS_START_FAILED",
-          `could not start '${command}': ${error.message}`
-        )
-      );
-    });
-    child.once("close", (code, closeSignal) => {
-      cleanup();
-      if (options.signal?.aborted === true) {
-        reject(
-          new ResearchIdeationExecutionError(
-            "IDEA_SPARK_WORKER_ABORTED",
-            `process '${command}' was aborted`,
-            { reason: String(options.signal.reason ?? "aborted") }
-          )
-        );
-        return;
-      }
-      resolvePromise({
-        exitCode: code ?? (closeSignal === null ? 1 : 128),
-        stdoutTail: stdout,
-        stderrTail: stderr
-      });
-    });
-    child.stdin.end(options.input);
-
-    function cleanup(): void {
-      options.signal?.removeEventListener("abort", onAbort);
-      if (heartbeatTimer !== undefined) clearInterval(heartbeatTimer);
-      if (killTimer !== undefined) clearTimeout(killTimer);
-    }
-  });
+  try {
+    return await superviseProcess(command, args, options);
+  } catch (error) {
+    throw new ResearchIdeationExecutionError(
+      options.signal?.aborted ? "IDEA_SPARK_WORKER_ABORTED" : "PROCESS_START_FAILED",
+      error instanceof Error ? error.message : String(error)
+    );
+  }
 }
 
 function positiveInteger(value: number | string | undefined, fallback: number): number {

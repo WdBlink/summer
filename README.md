@@ -1,17 +1,32 @@
 # Summer
 
-Summer is a protocol-first orchestrator for agent workflows that need to be inspected before they run. Workflows are versioned JSON, components and schemas are exact-version references, compilation is deterministic, and runtimes must prove their bindings instead of interpreting an underspecified graph.
+Summer turns repeatable agent work into versioned workflow products. A thin Skill helps you choose a workflow; Mastra executes registered components; artifact checks decide whether the result is acceptable. Successful dynamic runs can become reviewed drafts, validated releases, and reusable workflows.
 
-The repository is a TypeScript/pnpm monorepo marked private for package publishing. It currently runs two bounded workflows through the Mastra v0 adapter; the iterative-campaign core remains a model-free, in-memory fixture.
+Version 0.1.0 adds a Mastra-native product path alongside legacy v1 compatibility. See the [release changelog](CHANGELOG.md) for additions and limits, or start with the [workflow product guide](docs/workflow-products.md). Packages are not published to npm; source licensing is MIT.
 
 ## Why Summer
 
-- **Inspect before execution.** `summer.workflow/v1` sources compile to `summer.compiled-workflow/v1` only after graph, effect, retry, join, policy, schema, and registry checks pass.
-- **Discover without dispatching.** The compiled catalog and matcher explain candidates, capability gaps, runtime support, and dispatchability without starting a run.
-- **Fail closed at runtime.** Execution resolves the exact descriptors, schemas, executors, and registry digest captured by compilation.
-- **Keep authority explicit.** Bounded flows belong to runtime adapters. Campaign transitions and terminal decisions belong to the Summer campaign ledger and decision policy.
+Use Summer when an agent task should become a repeatable, inspectable workflow instead of a growing prompt or an improvised script.
+
+- **Turn successful runs into reusable products.** Review a parameterized draft, verify it on new inputs and failure cases, then explicitly publish an immutable version.
+- **Plan new tasks within known capabilities.** The host-preferred Codex planner can build a bounded workflow using registered Codex, MiniMax and file tools.
+- **Check deliverables, not just process exits.** Declared artifact checks decide acceptance separately from model output.
+- **Resume with explicit boundaries.** Mastra owns checkpoints and control flow; Summer owns grants, acceptance and publication. Unknown shell effects require reconciliation.
+- **Discover without dispatching.** Catalog and matching expose native workflows, published products and legacy capabilities without starting a run.
 
 ## Current status
+
+| New capability | Entry point | Boundary |
+| --- | --- | --- |
+| Native dynamic planning | `summer dynamic <brief> <request>` | Registered tools, frozen acceptance, granted host-preferred planner |
+| Reusable workflow products | `run-draft`, `promote`, `verify`, `publish`, `run-product` | Explicit publication; immutable versions |
+| Durable native execution | `resume-product`, `recover-product` | LibSQL checkpoints; unknown shell effects never automatically replayed |
+| Native research ideation v4 | `summer run research-ideation@4 <request>` | Native conditions/retries; retains Idea Spark compatibility adapter |
+| Offline factor tuning | `quant-loop`, `quant-resume` | Published experiment workflows; no live trading or holdout optimization |
+
+The quant loop is a control-policy implementation, not a validated backtest engine. No Vibe-Trading adapter or real-factor performance claim is bundled. Arbitrary host workers require explicit scope-risk opt-in; direct-call budgets do not bound hidden descendants.
+
+### Legacy compatibility
 
 The current catalog contains 27 component entries: 7 `available` and 20 `fixture`. Its two available, dispatchable bounded flows are:
 
@@ -22,7 +37,7 @@ The current catalog contains 27 component entries: 7 `available` and 20 `fixture
 
 `available` means that catalog, workflow, runtime, schema, and executor bindings compile. It does not prove live provider credentials or guarantee that a model-generated plan will validate.
 
-`summer-core-v0` is fixture-only: it has no executor bindings and uses an in-memory campaign ledger. There is no durable workflow checkpoint, durable campaign store, lease fencing, scheduler, campaign worker, or human-gate suspension.
+`summer-core-v0` remains fixture-only. Legacy v1 workflows do not gain native checkpoints through an implicit migration. The new v2 product path supports native persistence and explicit human approval; there is no distributed scheduler or trading executor.
 
 ## Quick start
 
@@ -42,32 +57,35 @@ The CLI prints one JSON value per invocation. Matching is read-only; running a w
 Create a request using the complete [`summer.research-ideation-request/v2` example](docs/workflows/research-ideation.md#request-and-execution-grant), update its paths, grant ID, and active timestamps, then run:
 
 ```bash
-pnpm --silent summer run research-ideation /absolute/path/to/request.json
+pnpm --silent summer run research-ideation@4 /absolute/path/to/request.json
 ```
 
-This workflow requires Idea Spark's `SKILL.md` and `scripts/run.py`, plus `python3` and `codex`. Only this workflow exposes application-layer resume:
+This workflow requires Idea Spark's `SKILL.md` and `scripts/run.py`, plus `python3` and `codex`. Version 4 uses native branches and checkpoints; resume a suspended run with a fresh grant:
 
 ```bash
-pnpm --silent summer resume research-ideation /absolute/path/to/run-dir /absolute/path/to/fresh-grant.json
+pnpm --silent summer resume research-ideation@4 /absolute/path/to/run-dir /absolute/path/to/fresh-grant.json
 ```
 
 ### Dynamic agent example
 
-For a bounded repository task such as inspection, implementation, and review, create the complete [`summer.dynamic-task-request/v1` example](docs/workflows/dynamic-agent-workflow.md#request), update its paths, grant ID, active timestamps, providers, models, and worker budget, then run:
+For a new bounded task, create a [native product brief and request](docs/workflow-products.md#dynamic-planning). Declare inputs, acceptance, providers, models and budget before planning:
 
 ```bash
-pnpm --silent summer run dynamic-agent-workflow /absolute/path/to/request.json
+pnpm --silent summer dynamic /absolute/path/to/brief.json /absolute/path/to/request.json
 ```
 
-The planner uses the highest-priority visible model according to the host Codex catalog. Generated mapping/tool graphs must alternate, end in a worker, and stay within `maxWorkerCalls` (`1`–`16`).
+The planner uses the highest-priority visible model according to the host Codex catalog at its highest supported effort; its exact model must be granted. Live generation uses a finite mapping/tool sequence. Authored products also support native branches, parallel steps and bounded loops. Codex workers require explicit host-scope opt-in; MiniMax workers have no tools.
+
+Existing unversioned `run research-ideation` and `run dynamic-agent-workflow` commands still select legacy paths. Use the explicit native commands above for new work; old runs are never silently migrated.
 
 ## Architecture
 
 ```text
-workflow JSON -> protocol validation -> exact-version registry -> compiler -> compiled IR
-catalog + compiled IR -------------------------------------------> explainable match
-compiled bounded flow + typed input -> Mastra adapter -> executors -> local receipts
-compiled iterative campaign --------> SummerCore -> in-memory ledger (fixture only)
+Skill -> catalog / published products -> typed request + grant
+dynamic plan or published definition -> native Mastra graph -> tools -> artifact acceptance
+accepted dynamic run -> reviewed draft -> verification -> immutable publication -> reuse
+
+legacy workflow/v1 -> legacy compiler / adapter (compatibility only)
 ```
 
 The main package boundaries are:
@@ -78,12 +96,12 @@ The main package boundaries are:
 | `packages/components` | Versioned descriptors, schemas, executors, and registry |
 | `packages/compiler` | Static compilation and semantic digests |
 | `packages/catalog` | Capability discovery, matching, and extension validation |
-| `packages/runtime-mastra` | Bounded-flow runtime adapter and receipt journal |
-| `packages/core` | Campaign reducer, ledger interface, and campaign-only facade |
-| `packages/research-ideation` | Executable Idea Spark component pack |
+| `packages/runtime-mastra` | Native product execution, planning, publication, quant policy and legacy adapter |
+| `packages/core` | Legacy campaign reducer, ledger interface, and campaign-only facade |
+| `packages/research-ideation` | Idea Spark component pack, native v4 and legacy compatibility |
 | `packages/cli` | JSON command-line interface |
 
-Core invariants:
+Legacy v1 invariants (new product boundaries are in the [product guide](docs/workflow-products.md)):
 
 - Serialized workflows contain no functions or arbitrary source code.
 - Nodes bind exact component versions; multiple incoming edges require `join: all` or `join: any`.
@@ -91,9 +109,11 @@ Core invariants:
 - Only a compiler-verified `iterative-campaign` may be started by `SummerCore`; bounded flows run through adapters.
 - Frame checks produce evidence; only the decision policy may commit a campaign transition.
 
-See [Core concepts and boundaries](docs/core-concepts.md) for the complete authority, runtime, safety, and persistence model.
+See [ADR 0003](docs/adr/0003-mastra-first-workflow-products.md) and the [product guide](docs/workflow-products.md) for current boundaries. [Core concepts](docs/core-concepts.md) documents the legacy v1 model.
 
 ## Runtime boundaries
+
+The following paragraphs describe legacy v1 paths only. See the product guide for native v2 grants, checkpoints, failed-effect handling and receipts. Nonempty model text alone never proves a v2 product's acceptance.
 
 Mastra v0 supports success-only linear bounded flows and one structured fork with linear branches converging at `join: all`. It rejects campaigns, `join: any`, failure routes, human suspension, multiple fan-outs, and non-idempotent writes.
 
@@ -111,11 +131,13 @@ pnpm skill:validate
 pnpm validate
 ```
 
-`pnpm validate` runs type checking, the test suite, and Skill validation. See the [CLI reference](docs/cli.md) for all nine commands and their exit behavior.
+`pnpm validate` runs type checking, the test suite, and Skill validation. See the [CLI reference](docs/cli.md) for native and legacy commands and their exit behavior.
 
 ## Documentation
 
 - [User manual and getting started](docs/README.md)
+- [Changelog and upgrade notes](CHANGELOG.md)
+- [Native workflow products](docs/workflow-products.md)
 - [Core concepts, architecture, and boundaries](docs/core-concepts.md)
 - [CLI reference](docs/cli.md)
 - [Research ideation workflow](docs/workflows/research-ideation.md)
@@ -123,6 +145,7 @@ pnpm validate
 - [Extension development](docs/extensions.md)
 - [ADR 0001: workflow IR and campaign authority](docs/adr/0001-summer-workflow-v1.md)
 - [ADR 0002: catalog and extension gate](docs/adr/0002-capability-catalog-and-extension-gate.md)
+- [ADR 0003: Mastra-first workflow products](docs/adr/0003-mastra-first-workflow-products.md)
 - [Mastra adapter support matrix](packages/runtime-mastra/README.md)
 - [Implementation roadmap](docs/roadmap.md)
 

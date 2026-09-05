@@ -3,6 +3,11 @@
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { RepositoryRegistryOptions } from "./repository-catalog.js";
+import { runNativeResearch } from "@summer/research-ideation";
+import { runQuantLoop, resumeQuantLoop } from "@summer/runtime-mastra";
+import { recoverProduct } from "@summer/runtime-mastra";
+import { productContracts, validateProduct } from "@summer/runtime-mastra";
+import { executeProduct, resumeProduct, productStatus, listProducts, loadProduct, matchProducts, promoteProduct, verifyProduct, publishProduct, selectProduct, planProduct } from "@summer/runtime-mastra";
 
 import {
   SummerCliOperationError,
@@ -14,6 +19,7 @@ import {
   matchRepositoryCatalog,
   resumeRepositoryWorkflow,
   runRepositoryWorkflow,
+  readJsonFile,
   validateWorkflowFile
 } from "./commands.js";
 
@@ -31,7 +37,28 @@ export const SUMMER_PROJECT_ROOT = fileURLToPath(
   new URL("../../..", import.meta.url)
 );
 
+const NATIVE_WORKFLOWS = [
+  { reference: "research-ideation@4", command: "run research-ideation@4", runtime: "mastra-native", persistence: "libsql", dispatchable: true, keywords: ["idea spark", "research ideation", "研究构思", "研究想法", "选题"], requires: ["Idea Spark installation", "typed research provider grant"] },
+  { reference: "dynamic-agent-workflow@2", command: "dynamic", runtime: "mastra-native", persistence: "libsql", dispatchable: true, keywords: ["dynamic", "动态工作流", "现场编排"], requires: ["product brief and request", "granted host planner"] },
+  { reference: "quant-factor-tuning@2", command: "quant-loop", runtime: "mastra-native", persistence: "libsql", dispatchable: true, keywords: ["quant", "因子调优", "量化因子", "因子发现"], requires: ["published experiment products", "frozen validation evidence contract"], scope: "offline predeclared candidates; no trading or bundled backtest adapter" }
+] as const;
+
 const USAGE = [
+  "summer contracts",
+  "summer validate-product <product.json>",
+  "summer quant-loop <plan.json> <grant.json>",
+  "summer quant-resume <run-dir> <fresh-grant.json>",
+  "summer dynamic <brief.json> <request.json>",
+  "summer run-draft <product.json> <request.json>",
+  "summer run-product <id[@version]> <request.json>",
+  "summer resume-product <run-dir> <fresh-grant.json>",
+  "summer recover-product <run-dir> <fresh-grant.json>",
+  "summer status <run-dir>",
+  "summer promote <run-dir> <candidate.json>",
+  "summer verify <draft.json> <suite.json>",
+  "summer publish <draft.json>",
+  "summer select <id@version>",
+  "summer products",
   "summer validate <workflow.json>",
   "summer compile <workflow.json>",
   "summer fixtures",
@@ -52,6 +79,57 @@ export async function runCli(
   const [command, ...args] = argv;
 
   try {
+    if (command === "quant-resume") {
+      requireArgumentCount(command, args, 2);
+      io.stdout(stringify({ ok: true, command, result: await resumeQuantLoop(projectRoot, args[0]!, readJsonFile(args[1]!).value) })); return 0;
+    }
+    if (command === "contracts") {
+      requireArgumentCount(command, args, 0);
+      io.stdout(stringify({ ok: true, command, ...productContracts() })); return 0;
+    }
+    if (command === "validate-product") {
+      requireArgumentCount(command, args, 1);
+      io.stdout(stringify({ ok: true, command, product: validateProduct(readJsonFile(args[0]!).value) })); return 0;
+    }
+    if (command === "quant-loop") {
+      requireArgumentCount(command, args, 2);
+      io.stdout(stringify({ ok: true, command, result: await runQuantLoop(projectRoot, readJsonFile(args[0]!).value, readJsonFile(args[1]!).value) })); return 0;
+    }
+    if ((command === "run" || command === "resume") && args[0] === "research-ideation@4") {
+      requireArgumentCount(command, args, command === "run" ? 2 : 3);
+      const request = command === "run" ? readJsonFile(args[1]!).value : (() => {
+        const manifest = readJsonFile(resolve(args[1]!, ".summer/request.json")).value as { query: string; workspaceDir: string; runDir: string };
+        return { schemaVersion: "summer.research-ideation-request/v2", query: manifest.query, workspaceDir: manifest.workspaceDir, runDir: manifest.runDir, executionGrant: readJsonFile(args[2]!).value };
+      })();
+      io.stdout(stringify({ ok: true, command, result: await runNativeResearch(request, { ...registryOptions, resume: command === "resume" }) })); return 0;
+    }
+    if (command === "products") {
+      requireArgumentCount(command, args, 0);
+      io.stdout(stringify({ ok: true, command, products: listProducts(projectRoot) })); return 0;
+    }
+    if (command === "status") {
+      requireArgumentCount(command, args, 1);
+      io.stdout(stringify({ ok: true, command, ...productStatus(args[0]!) })); return 0;
+    }
+    if (command === "publish" || command === "select") {
+      requireArgumentCount(command, args, 1);
+      const result = command === "publish" ? publishProduct(projectRoot, args[0]!) : selectProduct(projectRoot, args[0]!);
+      io.stdout(stringify({ ok: true, command, result })); return 0;
+    }
+    if (["dynamic", "run-draft", "run-product", "resume-product", "recover-product", "promote", "verify"].includes(command ?? "")) {
+      requireArgumentCount(command!, args, 2);
+      const value = readJsonFile(args[1]!).value;
+      let result: unknown;
+      if (command === "promote") result = promoteProduct(projectRoot, args[0]!, value);
+      else if (command === "verify") result = await verifyProduct(args[0]!, value);
+      else if (command === "resume-product") result = await resumeProduct(args[0]!, value);
+      else if (command === "recover-product") result = await recoverProduct(args[0]!, value);
+      else if (command === "dynamic") {
+        const planned = await planProduct(readJsonFile(args[0]!).value, value);
+        result = await executeProduct(planned.product, value);
+      } else result = await executeProduct(command === "run-product" ? loadProduct(projectRoot, args[0]!) : readJsonFile(args[0]!).value, value);
+      io.stdout(stringify({ ok: true, command, result })); return 0;
+    }
     if (command === undefined || command === "help" || command === "--help" || command === "-h") {
       io.stdout(stringify({ ok: true, command: "help", usage: USAGE }));
       return 0;
@@ -77,7 +155,7 @@ export async function runCli(
 
     if (command === "catalog") {
       requireArgumentCount(command, args, 0);
-      io.stdout(stringify(inspectRepositoryCatalog(projectRoot)));
+      io.stdout(stringify({ ...inspectRepositoryCatalog(projectRoot), products: listProducts(projectRoot), nativeWorkflows: NATIVE_WORKFLOWS }));
       return 0;
     }
 
@@ -120,7 +198,8 @@ export async function runCli(
 
     if (command === "match-intent") {
       requireAtLeastOneArgument(command, args);
-      io.stdout(stringify(matchRepositoryIntent(projectRoot, args.join(" "))));
+      const intent = args.join(" ");
+      io.stdout(stringify({ ...matchRepositoryIntent(projectRoot, intent), products: matchProducts(projectRoot, intent), nativeWorkflows: NATIVE_WORKFLOWS.filter((entry) => entry.keywords.some((keyword) => intent.toLowerCase().includes(keyword))) }));
       return 0;
     }
 

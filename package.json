@@ -1,9 +1,9 @@
 {
   "name": "summer",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "license": "MIT",
-  "description": "Protocol-first agent workflow orchestration with pluggable runtimes.",
+  "description": "Mastra-native workflow products: plan, execute, verify, publish, and reuse.",
   "type": "module",
   "packageManager": "pnpm@11.2.2",
   "engines": {

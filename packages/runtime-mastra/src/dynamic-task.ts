@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 
@@ -8,7 +7,7 @@ import {
   normalizeWorkflowBuilderDefinition,
   type WorkflowBuilderDefinition
 } from "@mastra/core/workflows/builder";
-import { ComponentRegistry, type ComponentExecutionContext } from "@summer/components";
+import { ComponentRegistry, superviseProcess, type ComponentExecutionContext } from "@summer/components";
 import {
   IdentifierSchema,
   TimestampSchema,
@@ -130,7 +129,7 @@ export const DynamicTaskRequestV1Schema = z
 const WorkerOutputSchema = z.object({
   provider: WorkerProviderSchema,
   model: z.string().min(1),
-  text: z.string()
+  text: z.string().trim().min(1)
 }).strict();
 
 const WorkerRunSchema = WorkerOutputSchema.extend({
@@ -187,7 +186,7 @@ const WORKER_OUTPUT_JSON_SCHEMA = {
   properties: {
     provider: { type: "string", enum: ["codex", "minimax"] },
     model: { type: "string" },
-    text: { type: "string" }
+    text: { type: "string", minLength: 1 }
   },
   required: ["provider", "model", "text"],
   additionalProperties: false
@@ -288,7 +287,38 @@ export async function runDynamicTask(
 ) {
   const request = DynamicTaskRequestV1Schema.parse(input);
   assertActive(request.executionGrant);
-  const runCommand = options.runCommand ?? spawnCommand;
+  const runner = options.runCommand ?? spawnCommand;
+  // Each subprocess gets a fresh expiry timer; successful earlier calls do not
+  // authorize later calls after the grant expires.
+  const runCommand: DynamicTaskCommandRunner = async (command, args, commandOptions) => {
+    assertActive(request.executionGrant);
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    const armExpiry = () => {
+      const remaining = Date.parse(request.executionGrant.expiresAt) - Date.now();
+      if (remaining <= 0) {
+        controller.abort(new DynamicTaskExecutionError(
+          "DYNAMIC_EXECUTION_GRANT_INACTIVE", "execution grant expired"
+        ));
+        return;
+      }
+      timer = setTimeout(armExpiry, Math.min(remaining, 2_147_483_647));
+      timer.unref();
+    };
+    armExpiry();
+    const signal = commandOptions.signal === undefined
+      ? controller.signal
+      : AbortSignal.any([commandOptions.signal, controller.signal]);
+    try {
+      signal.throwIfAborted();
+      const result = await runner(command, args, { ...commandOptions, signal });
+      signal.throwIfAborted();
+      assertActive(request.executionGrant);
+      return result;
+    } finally {
+      clearTimeout(timer!);
+    }
+  };
   const codexBin = options.codexBin ?? process.env.SUMMER_CODEX_BIN ?? "codex";
   const claudeBin = options.claudeBin ?? process.env.SUMMER_CLAUDE_BIN ?? "claude";
   const artifactDir = resolve(request.runDir, ".summer", "dynamic", context.runId);
@@ -331,6 +361,7 @@ export async function runDynamicTask(
   writeFileSync(definitionPath, `${JSON.stringify(definition, null, 2)}\n`);
 
   const workers: Array<z.infer<typeof WorkerRunSchema>> = [];
+  let workerCalls = 0;
   const tool = (provider: "codex" | "minimax") => createTool({
     id: `${provider}-worker`,
     description: `Run one isolated ${provider} subagent`,
@@ -344,7 +375,8 @@ export async function runDynamicTask(
       if (!request.executionGrant.workerPolicy.providers.includes(provider)) {
         throw new DynamicTaskExecutionError("DYNAMIC_WORKER_PROVIDER_DENIED", `provider '${provider}' is not granted`);
       }
-      if (workers.length >= request.executionGrant.workerPolicy.maxWorkerCalls) {
+      assertActive(request.executionGrant);
+      if (workerCalls >= request.executionGrant.workerPolicy.maxWorkerCalls) {
         throw new DynamicTaskExecutionError("DYNAMIC_WORKER_BUDGET_EXCEEDED", "worker call budget exhausted");
       }
       if (provider === "codex") {
@@ -352,6 +384,8 @@ export async function runDynamicTask(
       } else if (!request.executionGrant.workerPolicy.minimaxModels.includes(model)) {
         throw new DynamicTaskExecutionError("DYNAMIC_WORKER_MODEL_DENIED", `MiniMax model '${model}' is not granted`);
       }
+      // Reserve before awaiting: failed and concurrent dispatches consume budget.
+      const call = ++workerCalls;
       const output = provider === "codex"
         ? await runChecked(
             runCommand,
@@ -397,7 +431,7 @@ export async function runDynamicTask(
       const result = WorkerOutputSchema.parse({ provider, model, text: output.stdout.trim() });
       const record = WorkerRunSchema.parse({
         ...result,
-        call: workers.length + 1,
+        call,
         outputDigest: sha256Canonical(result)
       });
       workers.push(record);
@@ -517,7 +551,7 @@ function workerPrompt(prompt: string): string {
   ].join("\n");
 }
 
-function strongestCodexModel(output: string) {
+export function strongestCodexModel(output: string) {
   const parsed = z.object({
     models: z.array(z.object({
       slug: z.string(),
@@ -598,24 +632,8 @@ async function spawnCommand(
   args: readonly string[],
   options: { readonly cwd: string; readonly input?: string; readonly signal?: AbortSignal }
 ): Promise<DynamicTaskCommandResult> {
-  return await new Promise((resolvePromise, reject) => {
-    const child = spawn(command, [...args], {
-      cwd: options.cwd,
-      stdio: ["pipe", "pipe", "pipe"],
-      signal: options.signal
-    });
-    const stdout: Buffer[] = [];
-    const stderr: Buffer[] = [];
-    child.stdout.on("data", (chunk: Buffer) => stdout.push(chunk));
-    child.stderr.on("data", (chunk: Buffer) => stderr.push(chunk));
-    child.once("error", reject);
-    child.once("close", (code) => resolvePromise({
-      exitCode: code ?? 1,
-      stdout: Buffer.concat(stdout).toString("utf8"),
-      stderr: Buffer.concat(stderr).toString("utf8")
-    }));
-    child.stdin.end(options.input);
-  });
+  const result = await superviseProcess(command, args, { ...options, preserveStdout: true });
+  return { exitCode: result.exitCode, stdout: result.stdoutTail, stderr: result.stderrTail };
 }
 
 const DYNAMIC_TASK_SCHEMA_DESCRIPTORS: readonly SchemaDescriptorV1[] = [

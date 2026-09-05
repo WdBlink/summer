@@ -591,6 +591,7 @@ function validateTransitionBoundary(
 }
 
 function routeFromNavigator(snapshot: IdeaSparkNavigatorSnapshotV1): IdeaSparkRoute {
+  if (snapshot.retryDecision !== undefined) return snapshot.retryDecision;
   if (snapshot.category === "terminal") return "terminal";
   if (snapshot.category === "phase4") return "package";
   if (snapshot.category !== "phase3") {

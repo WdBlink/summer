@@ -1,5 +1,12 @@
 # CLI reference
 
+For Summer 0.1 native products, run `summer help` and `summer contracts`; see the
+[product guide](workflow-products.md). Native commands include `dynamic`,
+`run-draft`, `run-product`, `resume-product`, `recover-product`, `status`, `products`,
+`promote`, `verify`, `publish`, `select`, `validate-product`, `quant-loop` and `quant-resume`.
+`run/resume research-ideation@4` selects native research; unversioned research
+retains the legacy path described below.
+
 [Documentation](README.md) · [Repository README](../README.md)
 
 Run the repository CLI from the project root as:
@@ -9,6 +16,35 @@ pnpm --silent summer <command> [arguments]
 ```
 
 The `summer` package script builds `packages/cli` before invoking it. Each invocation emits one compact JSON value. Successful commands and help write to stdout; failures write to stderr.
+
+## Native product commands
+
+| Command | Arguments | Effect |
+| --- | --- | --- |
+| `contracts` | none | Print product, request, grant and registered-tool contracts |
+| `validate-product` | `<product.json>` | Validate a native definition without running it |
+| `dynamic` | `<brief.json> <request.json>` | Plan once with the granted host planner, freeze and execute |
+| `run-draft` | `<product.json> <request.json>` | Execute a reviewed, unpublished definition |
+| `run-product` | `<id[@version]> <request.json>` | Resolve and execute a published product |
+| `resume-product` | `<run-dir> <fresh-grant.json>` | Resume a suspended native checkpoint |
+| `recover-product` | `<run-dir> <fresh-grant.json>` | Recover supported linear read/atomic-write graphs after repair |
+| `status` | `<run-dir>` | Inspect a native product's identity, acceptance and last failure |
+| `products` | none | List locally published product versions |
+| `promote` | `<run-dir> <candidate.json>` | Create a reviewed candidate draft from an accepted run |
+| `verify` | `<draft.json> <suite.json>` | Run normal, invalid-input and expected-failure validation |
+| `publish` | `<draft.json>` | Publish a verified immutable version locally; does not push to GitHub |
+| `select` | `<id@version>` | Select a published default, including rollback |
+| `quant-loop` | `<plan.json> <grant.json>` | Run predeclared offline experiments |
+| `quant-resume` | `<run-dir> <fresh-grant.json>` | Resume a suspended quant checkpoint with cumulative budget |
+| `run` | `research-ideation@4 <request.json>` | Run native Idea Spark stages and provider gates |
+| `resume` | `research-ideation@4 <run-dir> <fresh-grant.json>` | Resume a suspended native research checkpoint |
+
+See the [product guide](workflow-products.md) for complete inputs and safety limits.
+
+## Legacy compatibility commands
+
+The tables and workflow examples below describe legacy v1 paths. The explicit
+`research-ideation@4` selector above is the exception to legacy `run`/`resume` routing.
 
 | Command | Arguments | Effect |
 | --- | --- | --- |
@@ -74,7 +110,7 @@ Both matching commands are read-only. A result may be `matched`, `ambiguous`, or
 
 ## Run and resume
 
-Only the two cataloged available bounded flows are executable:
+The two legacy cataloged available bounded flows are executable through these unversioned selectors:
 
 ```bash
 pnpm --silent summer run research-ideation /absolute/path/to/request.json
@@ -108,4 +144,3 @@ This validates the proposal against the current catalog digest, registry, compil
 | `2` | Unknown command or wrong argument count |
 
 An invalid extension proposal is a normal validation failure: it returns `ok: false` on stderr with exit code `1`. Other failures use a JSON error object containing `code`, `message`, and optional `details`.
-
